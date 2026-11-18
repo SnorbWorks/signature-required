@@ -1,0 +1,327 @@
+// Comic-book game test: one page, a camera that travels panel to panel,
+// a short scripted scene in the first panel and a fight in the second.
+import * as THREE from 'three';
+import { panelLayers, paperCanvas, rainCanvas, blurred, loadImage } from './art.js';
+import { Puppet, STYLES, poseFor, lerpPose, frameFor, sliceSprites, CW, CH, BASE, PPU } from './puppet.js';
+import { Lettering } from './letters.js';
+
+const PAGE = { w: 42, h: 27 };
+// Panels: [left, bottom, right, top] on the page. Different sizes on purpose.
+const DEFS = [
+  { id: 't1', r: [1.2, 19.6, 17.2, 25.8], scene: 'city', seed: 40, cap: 'ANOTHER NIGHT IN THE CITY...' },
+  { id: 't2', r: [17.8, 19.6, 27.8, 25.8], scene: 'neon', seed: 50 },
+  { id: 't3', r: [28.4, 19.6, 40.8, 25.8], scene: 'tower', seed: 60 },
+  { id: 'p1', r: [1.2, 10.4, 13.4, 19.0], scene: 'alley', sharp: true },
+  { id: 'p2', r: [14.0, 10.4, 31.6, 19.0], scene: 'dock', sharp: true },
+  { id: 'm3', r: [32.2, 6.0, 40.8, 19.0], scene: 'neon', seed: 70 },
+  { id: 'b1', r: [1.2, 1.2, 11.0, 9.8], scene: 'train', seed: 80 },
+  { id: 'b2', r: [11.6, 1.2, 22.6, 9.8], scene: 'city', seed: 90 },
+  { id: 'b3', r: [23.2, 4.6, 31.6, 9.8], scene: 'tower', seed: 100 },
+  { id: 'end', r: [23.2, 1.2, 31.6, 4.0], scene: 'end', sharp: true },
+  { id: 'b4', r: [32.2, 1.2, 40.8, 5.4], scene: 'city', seed: 110 },
+];
+const GROUND = 1.25, ZACT = -.5, UNIT = .022, ROLL = .07, FOV = 35;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const $ = id => document.getElementById(id);
+
+THREE.ColorManagement.enabled = false;
+const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, stencil: true });
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x17121a);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(FOV, 1, .1, 500);
+let W = 1, H = 1;
+function resize() { W = innerWidth; H = innerHeight; renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+
+const tex = (c, rep) => { const t = new THREE.CanvasTexture(c); t.anisotropy = 4; if (rep) t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
+const VS = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }';
+const FS = `uniform sampler2D map,mapB; uniform float focus,dim; uniform vec2 off,rep; varying vec2 vUv;
+void main(){ vec2 u=vUv*rep+off; vec4 a=texture2D(map,u), b=texture2D(mapB,u); vec4 c=mix(b,a,focus); c.rgb*=mix(dim,1.0,focus); gl_FragColor=c; }`;
+const layerMat = (map, mapB, ref) => new THREE.ShaderMaterial({
+  uniforms: { map: { value: map }, mapB: { value: mapB }, focus: { value: 0 }, dim: { value: .6 }, off: { value: new THREE.Vector2() }, rep: { value: new THREE.Vector2(1, 1) } },
+  vertexShader: VS, fragmentShader: FS, transparent: true, depthTest: false, depthWrite: false,
+  stencilWrite: true, stencilRef: ref, stencilFunc: THREE.EqualStencilFunc });
+
+let panels = [], P = {}, rainMats = [], L, hero, thug, goon, chars = [], manifest = {};
+
+async function build() {
+  try { const r = await fetch('./art/manifest.json', { cache: 'no-store' }); if (r.ok) manifest = await r.json(); } catch (e) {}
+  const artFor = {};
+  for (const id in (manifest.panels || {})) { artFor[id] = {}; for (const k in manifest.panels[id]) artFor[id][k] = await loadImage('./art/' + manifest.panels[id][k]); }
+  const paper = new THREE.Mesh(new THREE.PlaneGeometry(PAGE.w, PAGE.h),
+    new THREE.MeshBasicMaterial({ map: tex(paperCanvas()), transparent: true, depthTest: false, depthWrite: false }));
+  paper.position.set(PAGE.w / 2, PAGE.h / 2, 0); paper.renderOrder = 0; scene.add(paper);
+  const rainTex = tex(rainCanvas(), true);
+  const inkMat = new THREE.MeshBasicMaterial({ color: 0x0d0a12, transparent: true, depthTest: false, depthWrite: false });
+
+  panels = DEFS.map((def, i) => {
+    const [x0, y0, x1, y1] = def.r, w = x1 - x0, h = y1 - y0, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, ref = i + 1, base = 10 + i * 20;
+    const p = { def, id: def.id, x0, y0, x1, y1, w, h, cx, cy, ref, base, mats: [], focus: 0, want: 0, charOrder: base + 9 };
+    // the window: a black backing that also marks where this panel's art may draw
+    const mask = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0x0d0a12, transparent: true, depthTest: false, depthWrite: false,
+      stencilWrite: true, stencilRef: ref, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }));
+    mask.position.set(cx, cy, 0); mask.renderOrder = base; scene.add(mask);
+    panelLayers(def, artFor[def.id]).forEach((ly, j) => {
+      const tb = tex(blurred(ly.canvas, ly.blur)), ts = def.sharp ? tex(ly.canvas) : tb;
+      const mat = layerMat(ts, tb, ref), mesh = new THREE.Mesh(new THREE.PlaneGeometry(ly.plane.w, ly.plane.h), mat);
+      mesh.position.set(cx, cy + ly.plane.cy, -ly.d);
+      mesh.renderOrder = base + 1 + j + (ly.d < -ZACT ? 4 : 0);   // layers nearer than the action draw over the characters
+      if (ly.d >= -ZACT) p.charOrder = base + 1 + j + .5;
+      scene.add(mesh); p.mats.push(mat);
+    });
+    if (def.scene !== 'end') {
+      const mat = layerMat(rainTex, rainTex, ref); mat.uniforms.rep.value.set(w / 6, h / 6);
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w + 1.2, h + 1.2), mat); mesh.position.set(cx, cy, -.1); mesh.renderOrder = base + 18;
+      scene.add(mesh); p.mats.push(mat); rainMats.push(mat);
+    }
+    const t = .17, bar = (bx, by, bw, bh) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), inkMat); m.position.set(bx, by, 0); m.renderOrder = 900; scene.add(m); };
+    bar(cx, y0, w + t, t); bar(cx, y1, w + t, t); bar(x0, cy, t, h + t); bar(x1, cy, t, h + t);
+    P[def.id] = p; return p;
+  });
+}
+
+// ---------- characters
+class Char {
+  constructor(kind) {
+    this.pup = new Puppet(STYLES[kind]); this.tex = new THREE.CanvasTexture(this.pup.c);
+    this.mat = new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(CW / PPU, CH / PPU), this.mat); this.mesh.visible = false; scene.add(this.mesh);
+    Object.assign(this, { kind, x: 0, y: 0, vx: 0, vy: 0, face: 1, state: 'idle', st: 0, hp: 3, panel: null, relaxed: true, phase: 0,
+      inv: 0, ai: false, wait: 1, hop: null, pose: null, free: true, shown: false, lift: 0, zlift: 0, ghost: false, struck: false, hitDone: false });
+  }
+  setPanel(p) { this.panel = p; this.mat.stencilWrite = true; this.mat.stencilRef = p.ref; this.mat.stencilFunc = THREE.EqualStencilFunc; this.mesh.renderOrder = p.charOrder; }
+  unclip() { this.mat.stencilWrite = false; this.mesh.renderOrder = 950; }
+  set(s) { if (this.state !== s) { this.state = s; this.st = 0; } }
+  get busy() { return this.state === 'punch' || this.state === 'hurt' || this.state === 'down'; }
+  tick(dt, t) {
+    this.st += dt; this.inv = Math.max(0, this.inv - dt);
+    if (this.hop) { const h = this.hop; h.t += dt / h.dur; const u = Math.min(1, h.t);
+      this.x = h.x0 + (h.x1 - h.x0) * u; this.lift = Math.sin(Math.PI * u) * h.h; this.zlift = Math.sin(Math.PI * u) * 1.1;
+      if (u >= 1) { this.hop = null; this.lift = this.zlift = 0; this.setPanel(h.to); this.set('idle'); h.done(); } }
+    else {
+      this.x += this.vx * dt;
+      if (this.y > 0 || this.vy > 0) { this.y += this.vy * dt; this.vy -= 28 * dt;
+        if (this.y <= 0) { this.y = 0; this.vy = 0; if (this.state === 'jump') this.set('idle'); } }
+      if (!this.free && this.panel) this.x = clamp(this.x, this.panel.x0 + .7, this.panel.x1 - .7);
+    }
+    if (this.state === 'walk') this.phase += Math.abs(this.vx) * dt * (this.pup.cycle ? 3.6 : 2.3);
+    if (this.state === 'hurt' || this.state === 'down') this.vx *= Math.exp(-5 * dt);
+    const [target, rate] = poseFor(this, t);
+    this.pose = this.pose ? lerpPose(this.pose, target, 1 - Math.exp(-rate * dt)) : target;
+    if (!this.shown) { this.mesh.visible = false; return; }
+    if (this.pup.draw(this.pose, { air: this.y > .05 || !!this.hop, hurt: this.state === 'hurt' || this.state === 'down', frame: this.hop ? 'jump' : frameFor(this) })) this.tex.needsUpdate = true;
+    this.mesh.visible = !(this.inv > 0 && Math.floor(t * 14) % 2 === 0);
+    const py = (this.panel ? this.panel.y0 : 0) + GROUND + this.y + this.lift;
+    this.mesh.position.set(this.x, py + (BASE - CH / 2) / PPU, ZACT + this.zlift);
+    this.mesh.scale.x = this.face;
+    const f = this.hop ? 1 : this.panel ? this.panel.focus : 1; this.mat.color.setScalar(.6 + .4 * f);
+  }
+}
+
+// ---------- input
+const keys = {}, pressed = {};
+const MAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', Space: 'jump', ArrowUp: 'jump', KeyW: 'jump',
+  KeyJ: 'punch', KeyX: 'punch', KeyK: 'punch', Enter: 'ok' };
+addEventListener('keydown', e => { if (e.code === 'KeyR') location.reload(); const k = MAP[e.code]; if (!k) return; e.preventDefault();
+  if (!keys[k]) { pressed[k] = true; if (k !== 'left' && k !== 'right') pressed.ok = true; } keys[k] = true; });
+addEventListener('keyup', e => { const k = MAP[e.code]; if (k) keys[k] = false; });
+$('gl').addEventListener('pointerdown', () => { pressed.ok = true; });
+for (const [id, k] of [['bL', 'left'], ['bR', 'right'], ['bJ', 'jump'], ['bP', 'punch']]) {
+  const b = $(id);
+  b.addEventListener('pointerdown', e => { e.preventDefault(); keys[k] = true; pressed[k] = true; if (k !== 'left' && k !== 'right') pressed.ok = true; });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => { keys[k] = false; });
+}
+
+// ---------- little helpers for scripting the scene
+const waits = [];
+const until = fn => new Promise(r => waits.push({ fn, r }));
+const wait = s => { let t = 0; return until(dt => (t += dt) >= s); };
+const hint = s => { const h = $('hint'); h.textContent = s || ''; h.style.opacity = s ? 1 : 0; };
+function hud() { const h = $('hud'); h.style.display = fighting ? 'block' : 'none';
+  h.innerHTML = '<b>COURIER</b>' + '&#9829;'.repeat(Math.max(0, hero.hp)) + '<i>' + '&#9829;'.repeat(5 - Math.max(0, hero.hp)) + '</i>'; }
+
+let control = false, fighting = false, time = 0, hitstop = 0, shake = 0, combo = 0;
+const balloons = [], bursts = [], captions = [];
+const view = { cx: PAGE.w / 2, cy: PAGE.h / 2, D: 80, ox: -.14 }, focusOn = { panel: null, fill: .74 };
+
+function focusPanel(p, fill = .74) { focusOn.panel = p; focusOn.fill = fill; for (const q of panels) q.want = q === p ? 1 : 0; }
+function walkTo(c, x, sp = 3) { c.free = true; c.face = Math.sign(x - c.x) || 1; c.vx = c.face * sp; c.set('walk');
+  return until(() => { if ((x - c.x) * c.face <= 0) { c.x = x; c.vx = 0; c.set('idle'); return true; } }); }
+function hop(c, to, x1, h = 2.3, dur = .62) { return new Promise(res => { c.unclip(); c.set('jump'); c.vx = 0; c.face = Math.sign(x1 - c.x) || 1;
+  c.hop = { x0: c.x, x1, t: 0, dur, h, to, done: res }; }); }
+function addBalloon(c, text, kind) { const b = { b: L.balloon(text, kind), c }; balloons.push(b); return b; }
+function dropBalloon(b) { b.b.remove(); balloons.splice(balloons.indexOf(b), 1); }
+async function say(c, text, kind = 'speech') { const b = addBalloon(c, text, kind); hint('Space or tap to continue');
+  await wait(.3); pressed.ok = false; await until(() => pressed.ok); dropBalloon(b); hint(''); }
+function shout(c, text, sec = 1.6, kind = 'speech') { const b = addBalloon(c, text, kind); wait(sec).then(() => dropBalloon(b)); }
+function burst(text, x, y, size = 1, variant = 0) { bursts.push({ b: L.burst(text, variant), x, y, t: 0, size, rot: (Math.random() - .5) * 22 }); }
+function caption(p, text) { captions.push({ b: L.caption(text), p }); }
+
+// ---------- the fight
+const WORDS = ['POW!', 'BAM!', 'WHAP!', 'THOK!'];
+function heroHits(e) {
+  hero.hitDone = true; e.hp--; combo++;
+  const x = hero.x + hero.face * 1.55, y = hero.panel.y0 + GROUND + hero.y + 3.1;
+  if (e.hp <= 0) { e.set('down'); e.vx = hero.face * 7.5; e.vy = 7; e.y = .02; e.ai = false; hitstop = .17; shake = .6; burst('KRAKK!', x, y + .3, 1.25, 2); }
+  else { e.set('hurt'); e.st = 0; e.vx = hero.face * 3.6; hitstop = .085; shake = .35; burst(WORDS[combo % WORDS.length], x, y, 1, 0); }
+}
+function enemyHits(e) {
+  e.struck = true; hero.hp--; hero.inv = .9; hero.vx = e.face * 4.2; hitstop = .07; shake = .3;
+  burst('THWACK!', hero.x, hero.panel.y0 + GROUND + 2.7, .85, 1); hud();
+  if (hero.hp <= 0) { hero.set('down'); hero.vy = 6; hero.y = .02;
+    wait(1.7).then(() => { hero.hp = 5; hero.inv = 1.6; hero.set('idle'); hud(); shout(hero, 'Not today.', 1.3); }); }
+  else { hero.set('hurt'); hero.st = 0; }
+}
+function inReach(a, b) { const dx = (b.x - a.x) * a.face; return dx > .15 && dx < 2.05 && Math.abs(a.y - b.y) < 1.5; }
+
+function playHero() {
+  const idle = hero.state === 'idle' || hero.state === 'walk', air = hero.state === 'jump';
+  if (control && (idle || air)) {
+    const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    hero.vx = dir * 4.4; if (dir) hero.face = dir;
+    if (idle) hero.set(dir ? 'walk' : 'idle');
+    if (pressed.jump && idle) { hero.vy = 10.5; hero.y = .01; hero.set('jump'); }
+    if (pressed.punch) { hero.set('punch'); hero.st = 0; hero.hitDone = false; if (hero.y <= 0) hero.vx = hero.face * 1.4; }
+  } else if (!control && idle && !hero.free) hero.vx = 0;
+  if (hero.state === 'punch') {
+    if (hero.st > .07 && hero.st < .2 && !hero.hitDone) for (const e of [thug, goon]) if (e.shown && !e.ghost && e.state !== 'down' && inReach(hero, e)) { heroHits(e); break; }
+    if (hero.y <= 0) hero.vx *= .9;
+    if (hero.st > .34) hero.set(hero.y > 0 ? 'jump' : 'idle');
+  }
+  if (hero.state === 'hurt' && hero.st > .32) hero.set('idle');
+}
+function playEnemy(e, dt) {
+  if (!e.ai) return;
+  const dx = hero.x - e.x, dist = Math.abs(dx);
+  switch (e.state) {
+    case 'idle': case 'walk':
+      e.face = Math.sign(dx) || e.face;
+      if (dist > 1.75) { e.set('walk'); e.vx = e.face * 2.5; }
+      else { e.set('idle'); e.vx = 0; e.wait -= dt; if (e.wait <= 0 && hero.state !== 'down') e.set('wind'); }
+      break;
+    case 'wind': e.vx = 0; if (e.st > .42) { e.set('strike'); e.struck = false; } break;
+    case 'strike':
+      if (!e.struck && e.st > .04 && hero.inv <= 0 && hero.state !== 'down' && inReach(e, hero)) enemyHits(e);
+      if (e.st > .3) { e.set('idle'); e.wait = .6 + Math.random() * .9; }
+      break;
+    case 'hurt': if (e.st > .32) { e.set('idle'); e.wait = .3 + Math.random() * .5; } break;
+  }
+}
+
+// ---------- the scene, written out like a script
+async function story() {
+  const p1 = P.p1, p2 = P.p2;
+  hero.setPanel(p1); hero.x = p1.x0 - 1.4; hero.shown = true;
+  thug.setPanel(p1); thug.x = p1.x1 + 1.4; thug.face = -1; thug.hp = 4;
+  focusPanel(p1);
+  await wait(1.5);
+  caption(p1, 'The docks. 11:42 PM.');
+  await walkTo(hero, p1.x0 + 3.4, 2.6);
+  await say(hero, 'Pier 27.\nAlmost there...', 'thought');
+  hero.free = false; control = true; hint('Arrow keys to walk');
+  await until(() => hero.x > p1.x0 + 5.4);
+  control = false; hint(''); hero.vx = 0; hero.set('idle'); hero.face = 1;
+  thug.shown = true;
+  await walkTo(thug, p1.x1 - 2.7, 2.4);
+  await say(thug, 'End of the line, kid.\nHand over the package.');
+  await say(hero, 'Sorry. It needs\na signature.');
+  await say(thug, 'Why do they always\ntalk back...', 'thought');
+  await say(thug, 'Then we do this\nthe hard way!');
+  await walkTo(thug, p1.x1 - .9, 3.2);
+  await hop(thug, p2, p2.x0 + 1.7);
+  walkTo(thug, p2.x0 + 11.5, 3.4).then(() => { thug.face = -1; thug.relaxed = false; });
+  control = true; hint('Go after him  ▶');
+  await until(() => hero.x > p1.x1 - 1.0 && hero.y <= 0 && !hero.busy);
+  control = false; hint(''); focusPanel(p2);
+  await hop(hero, p2, p2.x0 + 1.9);
+  hero.free = false; hero.relaxed = false; hero.face = 1;
+  caption(p2, 'Pier 27. No witnesses.');
+  await wait(.5);
+  fighting = true; hud(); control = true; thug.free = false; thug.ai = true; thug.wait = 1.1;
+  hint('J or X to punch  •  Space to jump');
+  await until(() => thug.state === 'down');
+  hint('');
+  await wait(.9);
+  goon.setPanel(p2); goon.x = p2.x1 + 1.4; goon.face = -1; goon.hp = 3; goon.shown = true; goon.ghost = true; goon.relaxed = false;
+  await walkTo(goon, p2.x1 - 2.3, 3);
+  shout(goon, "Hey! That's\nmy brother!", 1.7);
+  goon.ghost = false; goon.free = false; goon.ai = true; goon.wait = 1.2;
+  await until(() => goon.state === 'down');
+  await wait(.9);
+  control = false; fighting = false; hud(); hero.vx = 0; hero.relaxed = true;
+  await until(() => hero.y <= 0 && !hero.busy); hero.set('idle');
+  await say(hero, 'Special delivery.');
+  focusPanel(P.end, .34);
+  await wait(1.2);
+  hint('To be continued...  Press R to play again');
+}
+
+// ---------- every frame
+const v3 = new THREE.Vector3();
+const scr = (x, y, z = 0) => { v3.set(x, y, z).project(camera); return [(v3.x + 1) / 2 * W, (1 - v3.y) / 2 * H]; };
+
+function frame(dtReal) {
+  const dtR = Math.min(dtReal, .05); time += dtR;
+  let dt = dtR; if (hitstop > 0) { hitstop -= dtR; dt = 0; }
+  for (let i = waits.length - 1; i >= 0; i--) if (waits[i].fn(dt)) { const w = waits[i]; waits.splice(i, 1); w.r(); }
+  if (dt > 0) { playHero(); playEnemy(thug, dt); playEnemy(goon, dt); for (const c of chars) c.tick(dt, time); }
+  if (dt > 0 && fighting) for (const e of [thug, goon]) {   // fighters can't stand inside each other
+    if (!e.shown || e.ghost || e.state === 'down' || hero.state === 'down' || hero.y > 1.6) continue;
+    const dx = hero.x - e.x, gap = 1.05;
+    if (Math.abs(dx) < gap) { const push = (gap - Math.abs(dx)) * (dx >= 0 ? 1 : -1); hero.x += push * .6; e.x -= push * .4; }
+  }
+  for (const k in pressed) pressed[k] = false;
+
+  // focus: the active panel sharpens, the rest fall soft
+  const kf = 1 - Math.exp(-dtR * 4);
+  for (const p of panels) { p.focus += (p.want - p.focus) * kf; for (const m of p.mats) m.uniforms.focus.value = p.focus; }
+  for (const m of rainMats) m.uniforms.off.value.set(-time * .35 % 1, time * 1.7 % 1);
+
+  // camera: frame the active panel, lean with the hero so the depth shifts
+  const fp = focusOn.panel, th = Math.tan(FOV * Math.PI / 360);
+  let gx = PAGE.w / 2, gy = PAGE.h / 2, gD = Math.max(PAGE.h / (2 * th), PAGE.w / (2 * th * camera.aspect)) / .95, gox = -.14;
+  if (fp) { const f = hero.panel === fp ? clamp((hero.x - fp.cx) / (fp.w / 2), -1, 1) : 0;
+    gx = fp.cx + f * fp.w * .06; gy = fp.cy; gox = -.14 + .09 * f;
+    gD = Math.max(fp.h / (2 * th), fp.w / (2 * th * camera.aspect)) / focusOn.fill; }
+  const kc = 1 - Math.exp(-dtR * 3.2);
+  view.cx += (gx - view.cx) * kc; view.cy += (gy - view.cy) * kc; view.D += (gD - view.D) * kc; view.ox += (gox - view.ox) * kc;
+  shake *= Math.exp(-dtR * 9);
+  const sx = (Math.random() - .5) * shake, sy = (Math.random() - .5) * shake;
+  const ox = view.ox + Math.sin(time * .5) * .012, oy = -.09 + Math.cos(time * .4) * .008;
+  camera.position.set(view.cx + ox * view.D + sx, view.cy + oy * view.D + sy, view.D);
+  camera.up.set(Math.sin(ROLL), Math.cos(ROLL), 0);
+  camera.lookAt(view.cx + sx, view.cy + sy, 0);
+  camera.updateMatrixWorld();
+  renderer.render(scene, camera);
+
+  // lettering rides on top, lined up with the tilted page
+  const a = scr(view.cx, view.cy), b = scr(view.cx + 1, view.cy);
+  const ppu = Math.hypot(b[0] - a[0], b[1] - a[1]), rot = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI, sc = ppu * UNIT;
+  for (const o of balloons) { const c = o.c, p = c.panel, rxW = o.b.rx * UNIT, ryW = o.b.ry * UNIT, headY = p.y0 + GROUND + c.y + 3.6;
+    const bx = clamp(c.x + Math.sign(p.cx - c.x) * rxW * .55, p.x0 + rxW + .35, p.x1 - rxW - .35), by = Math.min(headY + .6 + ryW, p.y1 - ryW - .35);
+    const s = scr(bx, by, ZACT), t = scr(c.x + c.face * .15, headY + .1, ZACT); o.b.set(s[0], s[1], sc, rot, t[0], t[1]); }
+  for (const o of captions) { const s = scr(o.p.x0 + .3, o.p.y1 - .3); o.b.set(s[0], s[1], sc * 1.15, rot, .55 + .45 * o.p.focus, (1 - o.p.focus) * 5); }
+  for (let i = bursts.length - 1; i >= 0; i--) { const o = bursts[i]; o.t += dtR;
+    const u = Math.min(1, o.t / .13), pop = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2), s = scr(o.x, o.y, ZACT);
+    o.b.set(s[0], s[1], sc * .92 * o.size * pop, rot + o.rot, o.t > .5 ? Math.max(0, 1 - (o.t - .5) / .22) : 1);
+    if (o.t > .72) { o.b.remove(); bursts.splice(i, 1); } }
+}
+
+async function boot() {
+  try { await Promise.race([Promise.all([document.fonts.load('italic 700 20px "Comic Neue"'), document.fonts.load('40px "Bangers"')]), new Promise(r => setTimeout(r, 1500))]); } catch (e) {}
+  await build();
+  L = new Lettering($('ink'));
+  hero = new Char('hero'); thug = new Char('thug'); goon = new Char('goon'); chars = [hero, thug, goon]; hero.hp = 5;
+  for (const c of chars) { const cfg = (manifest.sprites || {})[c.kind]; if (!cfg) continue;
+    const img = await loadImage('./art/' + cfg.file); if (img) { try { c.pup.sprites = sliceSprites(img, cfg); } catch (e) { console.error(e); } }
+    if (cfg.walk && c.pup.sprites) { const im2 = await loadImage('./art/' + cfg.walk.file);
+      if (im2) { try { Object.assign(c.pup.sprites, sliceSprites(im2, cfg.walk)); c.pup.cycle = cfg.walk.cycle; } catch (e) { console.error(e); } } } }
+  let last = performance.now();
+  const loop = now => { frame((now - last) / 1000); last = now; requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+  story();
+  window.__game = { hero, thug, goon, panels, view, keys, pressed, focusPanel, P };
+}
+boot().catch(e => { const d = $('err'); d.style.display = 'flex'; d.textContent = 'The game could not start:\n' + (e && e.stack || e); console.error(e); });
