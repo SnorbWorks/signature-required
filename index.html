@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Comic Game Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:ital,wght@1,700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #17121a; overflow: hidden; touch-action: none;
+    -webkit-user-select: none; user-select: none; }
+  #gl, #ink { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #ink { pointer-events: none; }
+  #hint { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) rotate(-1.5deg);
+    background: #f2b632; color: #0d0a12; border: 3px solid #0d0a12; padding: 6px 16px;
+    font: italic 700 clamp(15px, 1.25vw, 26px) "Comic Neue", "Chalkboard SE", "Comic Sans MS", sans-serif;
+    text-transform: uppercase; letter-spacing: .5px; white-space: nowrap;
+    box-shadow: 4px 4px 0 rgba(13,10,18,.55); transition: opacity .25s; opacity: 0; pointer-events: none; }
+  #hud { position: fixed; left: 18px; top: 16px; background: #f6efdc; color: #c9302c;
+    border: 3px solid #0d0a12; padding: 3px 12px 5px; transform: rotate(-2deg);
+    font: clamp(20px, 1.7vw, 36px) "Bangers", "Impact", sans-serif; letter-spacing: 3px;
+    box-shadow: 4px 4px 0 rgba(13,10,18,.55); display: none; }
+  #hud b { color: #0d0a12; font-weight: normal; margin-right: 8px; letter-spacing: 1px; }
+  #hud i { font-style: normal; color: #b9b0a0; }
+  #touch { display: none; }
+  @media (pointer: coarse) {
+    #touch { display: block; }
+    #hint { bottom: 132px; font-size: 14px; }
+  }
+  #touch button { position: fixed; bottom: 26px; width: 74px; height: 74px; border-radius: 50%;
+    border: 4px solid #0d0a12; background: rgba(246,239,220,.85); color: #0d0a12;
+    font: 30px "Bangers", "Impact", sans-serif; touch-action: none; }
+  #bL { left: 20px; } #bR { left: 108px; }
+  #bJ { right: 108px; } #bP { right: 20px; background: rgba(242,182,50,.92) !important; }
+  #wipe { position: fixed; inset: 0; background: #efe6cf; transform: translateX(105%); transition: transform .45s cubic-bezier(.6,0,.3,1);
+    display: flex; align-items: center; justify-content: center; border-left: 10px solid #0d0a12; border-right: 10px solid #0d0a12; pointer-events: none; }
+  #wipeT { font: clamp(40px, 7vw, 120px) "Bangers", "Impact", sans-serif; color: #0d0a12; letter-spacing: 3px; text-align: center; transform: rotate(-3deg); }
+  #wipeT small { display: block; font: italic 700 clamp(16px, 2vw, 34px) "Comic Neue", sans-serif; background: #f2b632; border: 4px solid #0d0a12; padding: 4px 18px; margin-top: 8px; }
+  #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    color: #f6efdc; font: 16px/1.5 sans-serif; padding: 30px; text-align: center; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<svg id="ink" xmlns="http://www.w3.org/2000/svg"></svg>
+<div id="hud"></div>
+<div id="hint"></div>
+<div id="touch">
+  <button id="bL">&#9664;</button><button id="bR">&#9654;</button>
+  <button id="bJ">UP</button><button id="bP">POW</button>
+</div>
+<div id="wipe"><div id="wipeT"></div></div>
+<div id="err"></div>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

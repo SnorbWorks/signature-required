@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Level 1 Storyboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:ital,wght@0,400;0,700;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #0d0a12; --paper: #efe6cf; --story: #cfd6f2; --action: #f2b632; --cap: #d8d0bd; }
+  body { margin: 0; background: #17121a; color: var(--ink); font: 16px/1.45 "Comic Neue", "Chalkboard SE", sans-serif; }
+  header { color: var(--paper); padding: 28px 24px 8px; max-width: 1180px; margin: 0 auto; }
+  h1 { font: 54px "Bangers", Impact, sans-serif; letter-spacing: 2px; margin: 0; color: var(--action); }
+  header p { margin: 6px 0; max-width: 70ch; }
+  .key span { display: inline-block; padding: 2px 10px; border: 2px solid var(--ink); margin-right: 8px; font-weight: 700; color: var(--ink); }
+  section { max-width: 1180px; margin: 26px auto; background: var(--paper); border: 4px solid var(--ink); padding: 18px 20px 22px; box-shadow: 8px 8px 0 #000; }
+  h2 { font: 34px "Bangers", Impact, sans-serif; letter-spacing: 1.5px; margin: 0 0 10px; }
+  h2 small { font: 700 16px "Comic Neue", sans-serif; background: var(--action); border: 2px solid var(--ink); padding: 2px 8px; margin-left: 10px; vertical-align: middle; }
+  svg { width: 100%; height: auto; display: block; background: #fbf6e6; border: 3px solid var(--ink); }
+  .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; margin-top: 14px; }
+  .card { border: 3px solid var(--ink); padding: 8px 12px 10px; background: #fbf6e6; }
+  .card.story { border-left: 14px solid #6f7fc8; } .card.action { border-left: 14px solid var(--action); } .card.caption { border-left: 14px solid #8f8774; }
+  .card h3 { margin: 0 0 4px; font: 22px "Bangers", Impact, sans-serif; letter-spacing: 1px; }
+  .card h3 em { font: 700 12px "Comic Neue", sans-serif; text-transform: uppercase; margin-left: 6px; }
+  .card p { margin: 4px 0; } .card b { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .lines { margin: 6px 0 0; padding: 6px 10px; background: #fff; border: 2px solid var(--ink); border-radius: 14px; font-style: italic; font-weight: 700; }
+  .lines div { margin: 2px 0; }
+  .exit { background: #ffd9c9; padding: 2px 6px; border: 2px dashed var(--ink); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Level 1: <span id="t"></span></h1>
+  <p>Every page and every frame, in reading order. The art and the game are both made from this map, so a change here changes both.</p>
+  <p class="key"><span style="background:var(--story)">Story frame: a composed comic illustration you tap through</span><span style="background:var(--action)">Action frame: you play in it</span></p>
+  <p id="count"></p>
+</header>
+<main id="m"></main>
+<script type="module">
+import { LEVEL } from './src/level1.js';
+const NS = 'http://www.w3.org/2000/svg', esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+document.getElementById('t').textContent = LEVEL.title;
+let nS = 0, nA = 0, html = '';
+LEVEL.pages.forEach((pg, i) => {
+  let svg = `<svg viewBox="0 0 42 27" xmlns="${NS}">`;
+  for (const p of pg.panels) {
+    const [x0, y0, x1, y1] = p.r, w = x1 - x0, h = y1 - y0, col = p.kind === 'action' ? 'var(--action)' : p.kind === 'story' ? 'var(--story)' : 'var(--cap)';
+    if (p.kind === 'action') nA++; else if (p.kind === 'story') nS++;
+    const fs = Math.min(1.5, h * .3, w * .16);
+    svg += `<rect x="${x0}" y="${27 - y1}" width="${w}" height="${h}" fill="${col}" stroke="#0d0a12" stroke-width=".18"/>` +
+      `<text x="${x0 + w / 2}" y="${27 - y1 + h / 2}" text-anchor="middle" font-family="Bangers,Impact" font-size="${fs}">${p.id}</text>` +
+      `<text x="${x0 + w / 2}" y="${27 - y1 + h / 2 + fs * .62}" text-anchor="middle" font-family="Comic Neue,sans-serif" font-weight="700" font-size="${Math.min(.72, fs * .5)}">${esc(p.name)}</text>`;
+  }
+  svg += '</svg>';
+  let cards = '';
+  for (const p of pg.panels) cards += `<div class="card ${p.kind}"><h3>${p.id} ${esc(p.name)}<em>${p.kind}</em></h3>` +
+    `<p><b>Shot</b> ${esc(p.shot)}</p><p><b>What happens</b> ${esc(p.beat)}</p>` +
+    (p.teaser ? `<p><b>Teaser while out of focus</b> ${esc(p.teaser)}</p>` : '') +
+    (p.exit ? `<p><span class="exit"><b>Hand-over</b> ${esc(p.exit)}</span></p>` : '') +
+    (p.lines.length ? `<div class="lines">${p.lines.map(l => `<div>${esc(l)}</div>`).join('')}</div>` : '') + '</div>';
+  html += `<section><h2>Page ${i + 1}: ${esc(pg.title)}<small>${pg.time}</small></h2>${svg}<div class="list">${cards}</div></section>`;
+});
+document.getElementById('m').innerHTML = html;
+document.getElementById('count').textContent = `${LEVEL.pages.length} pages, ${nS + nA} frames: ${nS} story frames and ${nA} action frames.`;
+</script>
+</body>
+</html>
