@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Level 1 Storyboard</title>
+<title>Signature Required #1 Storyboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:ital,wght@0,400;0,700;1,700&display=swap" rel="stylesheet">
 <style>
   :root { --ink: #0d0a12; --paper: #efe6cf; --story: #cfd6f2; --action: #f2b632; --cap: #d8d0bd; }
@@ -29,7 +29,7 @@
 </head>
 <body>
 <header>
-  <h1>Level 1: <span id="t"></span></h1>
+  <h1><span id="t"></span></h1>
   <p>Every page and every frame, in reading order. The art and the game are both made from this map, so a change here changes both.</p>
   <p class="key"><span style="background:var(--story)">Story frame: a composed comic illustration you tap through</span><span style="background:var(--action)">Action frame: you play in it</span></p>
   <p id="count"></p>
@@ -38,7 +38,7 @@
 <script type="module">
 import { LEVEL } from './src/level1.js';
 const NS = 'http://www.w3.org/2000/svg', esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-document.getElementById('t').textContent = LEVEL.title;
+document.getElementById('t').textContent = `${LEVEL.series} #${LEVEL.issue}: ${LEVEL.title}`;
 let nS = 0, nA = 0, html = '';
 LEVEL.pages.forEach((pg, i) => {
   let svg = `<svg viewBox="0 0 42 27" xmlns="${NS}">`;

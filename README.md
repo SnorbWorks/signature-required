@@ -2,7 +2,7 @@
 
 A comic-book game that plays in the browser. The page is bigger than the screen; the camera moves from frame to frame, story frames are read by tapping, action frames are played, and a good punch can knock someone into the next frame.
 
-Issue #1, "Signature Required": Milo, a night courier, has until midnight to get a locked case to Pier 27.
+Signature Required is the series. Issue #1, "Last Run of the Night": Milo, a night courier, has until midnight to get a locked case to Pier 27.
 
 ## Run it
 
