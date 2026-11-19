@@ -10,7 +10,7 @@ import { LEVEL } from './level1.js';
 const OPEN = LEVEL.pages.filter(q => q.label).length;   // pages before page 1: the prologue and tonight's earlier route
 
 const PAGE = { w: 42, h: 27 };
-const SOFT = .5;   // how soft the frames out of focus are (1 = the old heavy blur)
+const SOFT = .28;   // how soft the frames out of focus are (1 = the old heavy blur)
 const GROUND = 1.25, ZACT = -.5, UNIT = .022, ROLL = .07, FOV = 35;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const $ = id => document.getElementById(id);
@@ -121,34 +121,17 @@ async function buildPage(n) {
       const mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(w + 1.2, h + 1.2), mat)); mesh.position.set(cx, cy, -.1); mesh.renderOrder = base + 18;
       p.mats.push(mat); rainMats.push(mat);
     }
-    // the border: brushed by hand, never ruler-straight, and it goes soft with its frame
-    { const bc = borderCanvas(w, h, i * 7 + pageNo * 131 + 3), bw = w + 2 * BPAD, bh = h + 2 * BPAD; p.border = [];
-      for (const [cv, o] of [[bc, 900], [blurred(bc, 15), 901]]) { const mat = new THREE.MeshBasicMaterial({ map: tex(cv), transparent: true, depthTest: false, depthWrite: false });
+    // the border: plain and straight; the soft edges of the screen (the vignette in index.html) blur it away from the centre
+    { const bw = w + 2 * BPAD, bh = h + 2 * BPAD; p.border = [];
+      for (const [cv, o] of [[borderCanvas(w, h, .17), 900]]) { const mat = new THREE.MeshBasicMaterial({ map: tex(cv), transparent: true, depthTest: false, depthWrite: false });
         const m = put(new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), mat)); m.position.set(cx, cy, 0); m.renderOrder = o; p.border.push(mat); } }
     P[def.id] = p; return p;
   });
 }
 const BPAD = .6;
-function borderCanvas(w, h, seed) { const k = 44, c = document.createElement('canvas'); c.width = Math.round((w + 2 * BPAD) * k); c.height = Math.round((h + 2 * BPAD) * k);
-  const g = c.getContext('2d'); let a = seed * 2654435761 >>> 0; const r = () => { a = a * 1664525 + 1013904223 >>> 0; return a / 4294967296 - .5; };
-  // one wobbly loop round the frame, `off` outside (+) or inside (-) the true edge
-  const loop = (off, wob) => { const pts = [], x0 = BPAD - off, y0 = BPAD - off, x1 = BPAD + w + off, y1 = BPAD + h + off;
-    const side = (ax, ay, bx, by) => { const n = Math.max(2, Math.round(Math.hypot(bx - ax, by - ay) / .7)), nx = (by - ay), ny = -(bx - ax), nl = Math.hypot(nx, ny) || 1; let d = r() * wob;
-      for (let j = 0; j < n; j++) { const u = j / n; d = d * .6 + r() * wob; pts.push([(ax + (bx - ax) * u + nx / nl * d) * k, (ay + (by - ay) * u + ny / nl * d) * k]); } };
-    side(x0, y0, x1, y0); side(x1, y0, x1, y1); side(x1, y1, x0, y1); side(x0, y1, x0, y0); return pts; };
-  const trace = pts => { g.moveTo(pts[0][0], pts[0][1]); for (let j = 1; j < pts.length; j++) g.lineTo(pts[j][0], pts[j][1]); g.closePath(); };
-  g.fillStyle = '#0d0a12'; g.beginPath(); trace(loop(.115, .05)); trace(loop(-.105, .045)); g.fill('evenodd');
-  // dry-brush: short extra strokes that thicken the line here and there, and a few nicks out of it
-  g.strokeStyle = '#0d0a12'; g.lineCap = 'round';
-  for (let j = 0; j < (w + h) * 1.1; j++) { const horiz = r() > 0, t = r() + .5, far = r() > 0, len = (.5 + (r() + .5) * 1.6) * k, o2 = r() * .12 * k;
-    g.lineWidth = (.03 + (r() + .5) * .07) * k; g.beginPath();
-    if (horiz) { const x = (BPAD + t * w) * k, y = (BPAD + (far ? h : 0)) * k + o2; g.moveTo(x, y); g.lineTo(Math.min(x + len, (BPAD + w) * k), y + r() * .05 * k); }
-    else { const y = (BPAD + t * h) * k, x = (BPAD + (far ? w : 0)) * k + o2; g.moveTo(x, y); g.lineTo(x + r() * .05 * k, Math.min(y + len, (BPAD + h) * k)); }
-    g.stroke(); }
-  g.globalCompositeOperation = 'destination-out';
-  for (let j = 0; j < (w + h) * .5; j++) { const horiz = r() > 0, t = r() + .5, far = r() > 0, x = horiz ? (BPAD + t * w) * k : (BPAD + (far ? w : 0)) * k + (r() > 0 ? .13 : -.13) * k, y = horiz ? (BPAD + (far ? h : 0)) * k + (r() > 0 ? .13 : -.13) * k : (BPAD + t * h) * k;
-    g.beginPath(); g.ellipse(x, y, (horiz ? .16 : .035) * k, (horiz ? .035 : .16) * k, r() * .3, 0, 7); g.fill(); }
-  return c; }
+// a plain straight border; `t` is its thickness. The out-of-focus copy is drawn a little heavier and then blurred, so it stays black instead of washing out to grey.
+function borderCanvas(w, h, t) { const k = 44, c = document.createElement('canvas'); c.width = Math.round((w + 2 * BPAD) * k); c.height = Math.round((h + 2 * BPAD) * k);
+  const g = c.getContext('2d'); g.strokeStyle = '#0d0a12'; g.lineWidth = t * k; g.strokeRect(BPAD * k, BPAD * k, w * k, h * k); return c; }
 function clearPage() {
   for (const m of pageObjs) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }
   for (const t of pageTex) t.dispose();
@@ -825,7 +808,7 @@ function frame(dtReal) {
   for (const p of panels) { p.focus += (p.want - p.focus) * kf; p.tease += ((p === focusOn.panel ? 0 : 1) - p.tease) * kf;   // any frame not being played shows its freeze frame, before and after
     for (const m of p.mats) m.uniforms.focus.value = p.focus; if (p.teaser) p.teaser.uniforms.alpha.value = p.tease;
     for (const m of p.blocks) m.color.setScalar(.84 + .16 * p.focus);
-    if (p.border) { p.border[0].opacity = Math.min(1, p.focus * 1.6); p.border[1].opacity = 1 - p.focus * .9; } }
+    }
   for (const m of rainMats) m.uniforms.off.value.set(-time * .35 % 1, time * 1.7 % 1);
 
   // camera: frame the active panel, lean with the hero so the depth shifts
