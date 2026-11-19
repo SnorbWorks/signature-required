@@ -467,12 +467,12 @@ async function prologue1() {
   await say(hero, 'You at the pickup?', 'radio'); await say(hero, "I'm looking at it."); await say(hero, "That's not\nwhat I asked.", 'radio'); await say(hero, 'Then ask a\nbetter question.');
   startAction('Arrow keys (or A and D) to run  •  Space to jump'); hudOn = false; hud();
   await until(() => hero.x > a.x0 + 11.6 && hero.grounded);
-  chat([dot('Danny never needed\nthis long.'), [hero, "Danny isn't here.", 1.5], dot("No. He isn't.", 1.6)]);
+  chat([dot('Danny never needed\nthis long.'), [hero, "Danny isn't here.", 1.5], dot('...', 1.3), dot("No. He isn't.", 1.6)]);
   await until(() => hero.x > a.x0 + 21.5 && hero.grounded && !hero.busy);
   await endAction(); await walkTo(hero, a.x1 + 1.6, 3.6); hero.shown = false;
   // the pickup
   enterPanel(b); spawn(keeper, b, b.w - 3.6, { face: -1, relaxed: true }); await heroEnters(b, 2);
-  await say(keeper, "You're the new kid?"); await say(hero, "Depends who's asking."); await say(keeper, "You Danny's brother?"); await say(hero, 'Was.');
+  await say(keeper, "You're the new kid?"); await say(hero, "Depends who's asking."); await say(keeper, "You Danny's brother?"); await say(hero, '...'); await say(hero, 'Was.');
   hero.free = false; control = true; hint('Walk to the counter');
   await until(() => hero.x > keeper.x - 2.7); control = false; hero.vx = 0; hero.set('idle'); hero.face = 1;
   await press('J or X: take the package'); burst('GOT IT', hero.x + 1.2, hero.wy + 3, .7, 1, .9);
@@ -729,7 +729,7 @@ async function page6() {
   const b = P['6.5'], c = P['6.6']; enterPanel(b);
   spawn(gage, b, b.w - 6, { face: -1, hp: 6 }); gage.knockTo = { p: c, pit: true, word: 'KLANG!', h: .2 };
   await heroEnters(b, 2.6);
-  await say(gage, "The last courier didn't\nlisten either."); shout(hero, 'What last courier?', 1.4); await wait(.5);
+  await say(gage, "The last courier didn't\nlisten either."); await say(hero, '...'); shout(hero, 'What last courier?', 1.4); await wait(.5);
   arm(gage, { reach: 3.4, windT: .7, speed: 2.0, leaps: true, heavy: true });
   startAction('No blocking the hook: dodge it (L), then hit  •  mind the gap');
   await until(() => { if (gage.knockTo && !gage.hop && gage.y < -1) { gage.knockTo.x = clamp(gage.x, c.x0 + 2, c.x1 - 2); knock(gage); }   // down through the gap and into the frame below
