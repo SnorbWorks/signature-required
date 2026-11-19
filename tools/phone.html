@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>Phone preview</title>
+<!-- Test aid, not part of the game: shows the game at phone size, upright and sideways, next to each other.
+     Anything after ? is passed on, e.g. tools/phone.html?page=3&auto=1 -->
+<style>body{margin:12px;background:#333;display:flex;gap:16px;align-items:flex-start}iframe{border:3px solid #000;background:#000}</style>
+<script>
+const q = location.search;
+document.write(`<iframe id="up" width="390" height="740" src="../index.html${q}"></iframe><iframe id="side" width="844" height="390" src="../index.html${q}"></iframe>`);
+</script>
