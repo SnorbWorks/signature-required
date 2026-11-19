@@ -33,6 +33,7 @@
   <p>Every page and every frame, in reading order. The art and the game are both made from this map, so a change here changes both.</p>
   <p class="key"><span style="background:var(--story)">Story frame: a composed comic illustration you tap through</span><span style="background:var(--action)">Action frame: you play in it</span></p>
   <p id="count"></p>
+  <div id="rules"></div>
 </header>
 <main id="m"></main>
 <script type="module">
@@ -53,13 +54,15 @@ LEVEL.pages.forEach((pg, i) => {
   svg += '</svg>';
   let cards = '';
   for (const p of pg.panels) cards += `<div class="card ${p.kind}"><h3>${p.id} ${esc(p.name)}<em>${p.kind}</em></h3>` +
-    `<p><b>Shot</b> ${esc(p.shot)}</p><p><b>What happens</b> ${esc(p.beat)}</p>` +
+    (p.view ? `<p><b>Played from</b> ${esc(p.view)}</p>` : '') + `<p><b>Shot</b> ${esc(p.shot)}</p><p><b>What happens</b> ${esc(p.beat)}</p>` +
     (p.teaser ? `<p><b>Teaser while out of focus</b> ${esc(p.teaser)}</p>` : '') +
     (p.exit ? `<p><span class="exit"><b>Hand-over</b> ${esc(p.exit)}</span></p>` : '') +
     (p.lines.length ? `<div class="lines">${p.lines.map(l => `<div>${esc(l)}</div>`).join('')}</div>` : '') + '</div>';
   html += `<section><h2>Page ${i + 1}: ${esc(pg.title)}<small>${pg.time}</small></h2>${svg}<div class="list">${cards}</div></section>`;
 });
 document.getElementById('m').innerHTML = html;
+document.getElementById('rules').innerHTML = (LEVEL.rules || []).map(r => { const i = r.indexOf(':');
+  return `<p><b style="color:var(--action)">${esc(r.slice(0, i))}</b>${esc(r.slice(i))}</p>`; }).join('');
 document.getElementById('count').textContent = `${LEVEL.pages.length} pages, ${nS + nA} frames: ${nS} story frames and ${nA} action frames.`;
 </script>
 </body>
