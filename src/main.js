@@ -9,6 +9,7 @@ import { Lettering } from './letters.js';
 import { LEVEL } from './level1.js';
 
 const PAGE = { w: 42, h: 27 };
+const SOFT = .28;   // how soft the frames out of focus are (1 = the old heavy blur)
 const GROUND = 1.25, ZACT = -.5, UNIT = .022, ROLL = .07, FOV = 35;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const $ = id => document.getElementById(id);
@@ -19,18 +20,30 @@ const QS = new URLSearchParams(location.search), AUTO = QS.has('auto');
 const G = [-60, 100, 0, null, false];
 const landings = []; for (let i = 1; i <= 11; i++) landings.push(i % 2 ? [4.5, 9.2, i * 1.55, 'steel', false] : [.6, 5.3, i * 1.55, 'steel', false]);
 landings.push([.6, 9.2, 12 * 1.55, 'steel', false]);
+const fire = []; for (let i = 1; i <= 11; i++) fire.push(i % 3 === 0 ? (i % 2 ? [6.2, 9.2, i * 1.55, 'steel', false] : [.6, 3.6, i * 1.55, 'steel', false]) : landings[i - 1]);   // some flights have rusted away
+fire.push([.6, 9.2, 12 * 1.55, 'steel', false]);
+const FLOOR = [-60, 100, 0, 'steel', false];
 const GAME = {
   '1.1': { track: 'x' },
-  '1.6': { scene: 'roofs', seed: 12, plats: [[-6, 4.6, 2.6, 'roof'], [6.1, 10.1, 1.8, 'roof'], [12.1, 15.6, 2.2, 'roof'], [18.1, 20.2, 1.2, 'roof']] },
-  '2.1': { scene: 'alley' }, '2.3': { scene: 'dock' }, '2.4': { scene: 'dock' },
-  '3.2': { scene: 'yard', seed: 31, floor: 1.25 },
-  '3.3': { scene: 'yard', seed: 33, floor: 1.25, plats: [G, [4.4, 6.4, 1.6, 'crate'], [9.4, 11.4, 1.6, 'crate']] },
-  '3.7': { scene: 'yard', seed: 37, track: 'x', plats: [[-6, 5.5, .6, 'container'], [5.5, 11, 1.8, 'container'], [11, 16.5, .9, 'container'],
-    [17.9, 27, 1.4, 'container'], [27, 32, 2.6, 'container'], [34.2, 46, 1.4, 'container']] },
-  '4.1': { scene: 'crane', seed: 41, track: 'y', plats: [[-60, 100, 0, 'steel', false], ...landings] },
-  '4.4': { scene: 'crane', seed: 44, plats: [[-60, 100, 0, 'steel', false]] },
-  '4.5': { scene: 'crane', seed: 45, plats: [[-60, 100, 0, 'steel', false]] },
-  '5.5': { scene: 'end', text: 'TO BE CONTINUED...' },
+  '1.6': { scene: 'roofs', seed: 12, plats: [[-6, 4.6, 2.6, 'roof'], [6.1, 10.1, 1.8, 'roof'], [12.1, 15.6, 2.2, 'roof'], [18.1, 26, 1.2, 'roof']] },
+  '1.7': { scene: 'roofs', seed: 17, plats: [[-6, 5.6, -.75, 'roof'], [8.2, 9.6, -.2, 'steel', false], [12.6, 30, -.75, 'steel', false]] },
+  '2.1': { scene: 'city', seed: 21, track: 'y', plats: [FLOOR, ...fire] },
+  '2.3': { scene: 'neon', seed: 23, plats: [[-4, 3.4, -.3, 'roof'], [4.8, 8.2, -.3, 'roof'], [9.9, 12.6, -.3, 'roof'], [14.2, 30, -.3, 'roof']] },
+  '2.4': { plats: [FLOOR] },
+  '3.2': { seed: 32 },
+  '3.4': { scene: 'neon', seed: 34, plats: [FLOOR, [2.6, 5.4, 1.3, 'crate'], [6.4, 9.2, 1.3, 'crate'], [10.3, 13.7, 1.0, 'crate'], [14.9, 19.5, 2.5, 'container'], [20.7, 27.4, 2.9, 'container']] },
+  '3.6': { scene: 'alley', plats: [G, [4.6, 5.1, 1.5, 'crate'], [8.2, 10.2, 1.3, 'crate']] },
+  '4.1': { scene: 'alley' }, '4.3': { scene: 'dock' }, '4.4': { scene: 'dock' },
+  '5.2': { scene: 'yard', seed: 31, floor: 1.25 },
+  '5.3': { scene: 'yard', seed: 33, floor: 1.25, plats: [G, [4.4, 6.4, 1.6, 'crate'], [9.4, 11.4, 1.6, 'crate']] },
+  '5.7': { scene: 'yard', seed: 37, plats: [[-6, 5.5, .6, 'container'], [5.5, 11, 1.8, 'container'], [11, 16.5, .9, 'container'], [17.9, 32, 1.4, 'container']] },
+  '5.8': { scene: 'yard', seed: 38, plats: [[-6, 3.6, 1.4, 'container'], [5.0, 8.4, 2.0, 'container'], [10.0, 14, 2.6, 'container']] },
+  '6.1': { scene: 'crane', seed: 41, track: 'y', plats: [FLOOR, ...landings] },
+  '6.3': { scene: 'crane', seed: 43, plats: [[-4, 4.6, .8, 'steel', false], [6.2, 10.4, .8, 'steel', false], [12, 15.6, .8, 'steel', false], [17.2, 30, .8, 'steel', false]] },
+  '6.5': { scene: 'crane', seed: 44, plats: [[-60, 6, 0, 'steel', false], [8.6, 100, 0, 'steel', false]] },   // a section of the walkway is missing
+  '6.6': { scene: 'crane', seed: 45, plats: [FLOOR] },
+  '7.1': { scene: 'dock', plats: [G, [6, 7, .7, 'crate'], [11, 12.2, .9, 'crate'], [16, 17, .7, 'crate']] },
+  '7.7': { scene: 'end', text: 'TO BE CONTINUED...' },
 };
 
 THREE.ColorManagement.enabled = false;
@@ -50,7 +63,7 @@ const VS = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*
 const FS = `uniform sampler2D map,mapB; uniform float focus,dim,alpha; uniform vec2 off,rep; varying vec2 vUv;
 void main(){ vec2 u=vUv*rep+off; vec4 a=texture2D(map,u), b=texture2D(mapB,u); vec4 c=mix(b,a,focus); c.rgb*=mix(dim,1.0,focus); c.a*=alpha; gl_FragColor=c; }`;
 const layerMat = (map, mapB, ref) => new THREE.ShaderMaterial({
-  uniforms: { map: { value: map }, mapB: { value: mapB }, focus: { value: 0 }, dim: { value: .6 }, alpha: { value: 1 }, off: { value: new THREE.Vector2() }, rep: { value: new THREE.Vector2(1, 1) } },
+  uniforms: { map: { value: map }, mapB: { value: mapB }, focus: { value: 0 }, dim: { value: .84 }, alpha: { value: 1 }, off: { value: new THREE.Vector2() }, rep: { value: new THREE.Vector2(1, 1) } },
   vertexShader: VS, fragmentShader: FS, transparent: true, depthTest: false, depthWrite: false,
   stencilWrite: true, stencilRef: ref, stencilFunc: THREE.EqualStencilFunc });
 const clipMat = (o, ref) => new THREE.MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: ref, stencilFunc: THREE.EqualStencilFunc, ...o });
@@ -76,7 +89,7 @@ async function buildPage(n) {
     mask.position.set(cx, cy, 0); mask.renderOrder = base;
     const art = artFor[def.id];
     panelLayers(def, art).forEach((ly, j) => {
-      const mat = layerMat(tex(ly.canvas), tex(blurred(ly.canvas, ly.blur)), ref), mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(ly.plane.w, ly.plane.h), mat));
+      const mat = layerMat(tex(ly.canvas), tex(blurred(ly.canvas, ly.blur * SOFT)), ref), mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(ly.plane.w, ly.plane.h), mat));
       mesh.position.set(cx, cy + ly.plane.cy, -ly.d);
       mesh.renderOrder = base + 1 + j + (ly.d < -ZACT ? 4 : 0);   // layers nearer than the action draw over the characters
       if (ly.d >= -ZACT) p.charOrder = base + 1 + j + .5;
@@ -91,7 +104,7 @@ async function buildPage(n) {
       const mat = clipMat({ map: tex(blockCanvas(b.look, bw, bh, k + i * 3)) }, ref), mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), mat));
       mesh.position.set((bx0 + bx1) / 2, y0 + GROUND + b.top - bh / 2, ZACT); mesh.renderOrder = p.charOrder - .1; p.blocks.push(mat); });
     // the frozen teaser, shown until the reader gets here
-    if (art && art.teaser) { const ly = artLayer(def, art.teaser, .3), mat = layerMat(tex(ly.canvas), tex(blurred(ly.canvas, ly.blur)), ref);
+    if (art && art.teaser) { const ly = artLayer(def, art.teaser, .3), mat = layerMat(tex(ly.canvas), tex(blurred(ly.canvas, ly.blur * SOFT)), ref);
       const mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(ly.plane.w, ly.plane.h), mat)); mesh.position.set(cx, cy + ly.plane.cy, -ly.d); mesh.renderOrder = base + 16;
       p.mats.push(mat); p.teaser = mat; }
     if (def.kind !== 'caption') {
@@ -109,7 +122,7 @@ function clearPage() {
   for (const t of pageTex) t.dispose();
   pageObjs = []; pageTex = [];
   for (const o of balloons) o.b.remove(); for (const o of captions) o.b.remove(); for (const o of bursts) o.b.remove();
-  balloons.length = captions.length = bursts.length = drops.length = 0; spot = null; fork = null; foes = [];
+  balloons.length = captions.length = bursts.length = drops.length = 0; spot = null; fork = null; xing = null; foes = [];
   for (const c of chars) { c.shown = false; c.panel = null; c.hop = null; c.ai = false; c.mesh.visible = false; }
   focusOn.panel = null; focusOn.eye = null; control = false; hudOn = false; hud();
 }
@@ -130,7 +143,7 @@ class Char {
   set(s) { if (this.state !== s) { this.state = s; this.st = 0; } }
   get busy() { return this.state === 'punch' || this.state === 'hurt' || this.state === 'down'; }
   fell() {
-    if (this === hero && !this.noRespawn && this.safe) { this.x = this.safe.x; this.y = this.safe.y; this.vx = this.vy = 0; this.inv = 1.3; this.grounded = true; this.set('idle'); return; }
+    if (this === hero && !this.noRespawn && this.safe) { this.x = this.safe.x; this.y = this.safe.y; this.vx = this.vy = 0; this.inv = 1.3; this.grounded = true; this.set('idle'); lose(5); return; }
     this.gone = true; this.shown = false; this.vx = this.vy = 0; if (this !== hero) { this.hp = 0; this.ai = false; this.set('down'); }
   }
   tick(dt, t) {
@@ -147,7 +160,7 @@ class Char {
       if (this.vy > 0 || this.y > fl + 1e-4) { this.grounded = false; this.y += this.vy * dt; this.vy -= 28 * dt;
         if (this.vy <= 0 && this.y <= fl) { this.y = fl; this.vy = 0; this.grounded = true; if (this.state === 'jump') this.set('idle'); } }
       else { this.y = fl; this.grounded = true; }
-      if (!this.free) this.x = clamp(this.x, p.x0 + .7, p.x1 - .7);
+      if (!this.free) { const m = this === hero ? .7 : 1.9; this.x = clamp(this.x, p.x0 + m, p.x1 - m); }   // foes stop short of the frame edge, so Milo can always get round behind them
       if (this.y < -(GROUND + 3.5)) { this.fell(); if (this.gone) { this.mesh.visible = false; return; } }
       if (this === hero && this.grounded && !this.busy) this.safe = { x: this.x, y: this.y };
       this.wx = this.x; this.wy = p.y0 + GROUND + this.y;
@@ -162,19 +175,19 @@ class Char {
     this.mesh.visible = !(this.inv > 0 && Math.floor(t * 14) % 2 === 0);
     this.mesh.position.set(this.wx, this.wy + (BASE - CH / 2) / PPU, ZACT + this.zlift);
     this.mesh.scale.x = this.face; this.mesh.rotation.z = -this.spin * this.face;
-    const f = this.hop ? 1 : this.panel.focus; this.mat.color.setScalar(.6 + .4 * f);
+    const f = this.hop ? 1 : this.panel.focus; this.mat.color.setScalar(.84 + .16 * f);
   }
 }
 function spawn(c, p, lx, o = {}) { c.setPanel(p); c.x = p.x0 + lx; c.y = o.y || 0; c.vx = c.vy = 0; c.hop = null; c.gone = false; c.shown = o.shown !== false; c.grounded = true;
-  c.face = o.face || 1; c.state = 'idle'; c.st = 0; c.ai = false; c.free = true; c.ghost = false; c.relaxed = !!o.relaxed; c.knockTo = null; c.guard = null; c.spin = 0;
+  c.face = o.face || 1; c.state = 'idle'; c.st = 0; c.ai = false; c.free = true; c.ghost = false; c.relaxed = !!o.relaxed; c.knockTo = null; c.guard = null; c.spin = 0; c.snatch = c.hasCase = false;
   if (o.hp) c.hp = o.hp; c.wx = c.x; c.wy = p.y0 + GROUND + c.y; if (c === hero) { c.safe = { x: c.x, y: c.y }; c.noRespawn = false; } }
 
 // ---------- input
 const keys = {}, pressed = {};
-const MAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', Space: 'jump', ArrowUp: 'jump', KeyW: 'jump',
+const MAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', Space: 'jump', ArrowUp: 'jump', KeyW: 'jump', ArrowDown: 'down', KeyS: 'down',
   KeyJ: 'punch', KeyX: 'punch', KeyK: 'punch', Enter: 'ok' };
 addEventListener('keydown', e => { if (e.code === 'KeyR') location.reload(); const k = MAP[e.code]; if (!k) return; e.preventDefault();
-  if (!keys[k]) { pressed[k] = true; if (k !== 'left' && k !== 'right') pressed.ok = true; } keys[k] = true; });
+  if (!keys[k]) { pressed[k] = true; if (k !== 'left' && k !== 'right' && k !== 'down') pressed.ok = true; } keys[k] = true; });
 addEventListener('keyup', e => { const k = MAP[e.code]; if (k) keys[k] = false; });
 $('gl').addEventListener('pointerdown', () => { pressed.ok = true; });
 for (const [id, k] of [['bL', 'left'], ['bR', 'right'], ['bJ', 'jump'], ['bP', 'punch']]) {
@@ -191,9 +204,20 @@ const hint = s => { const h = $('hint'); h.textContent = s || ''; h.style.opacit
 function hud() { const h = $('hud'); h.style.display = hudOn ? 'block' : 'none'; if (!hero) return;
   h.innerHTML = '<b>MILO</b>' + '&#9829;'.repeat(Math.max(0, hero.hp)) + '<i>' + '&#9829;'.repeat(5 - Math.max(0, hero.hp)) + '</i>'; }
 
-let control = false, hudOn = false, time = 0, hitstop = 0, shake = 0, combo = 0, spot = null, fork = null;
+// The clock: starts when Milo takes the case and only runs while the player is playing.
+const clock = { on: false, t: 0, par: 480, tip: true, shown: '' }, SPM = clock.par / 36;   // real seconds of play per story minute
+function clockTime() { const m = 24 + clock.t / SPM, late = m >= 60; return (late ? '12:' : '11:') + String(Math.floor(late ? m - 60 : m)).padStart(2, '0') + (late ? ' AM' : ' PM'); }
+function showClock() { const c = $('clock'); if (!clock.on && !clock.t) { if (clock.shown) { clock.shown = ''; c.style.display = 'none'; } return; }
+  const left = Math.ceil(36 - clock.t / SPM), s = clockTime() + '<small>' + (left > 0 ? left + ' min left' : 'LATE') + '</small>';
+  if (s !== clock.shown) { clock.shown = s; c.innerHTML = s; c.style.display = 'block'; c.className = left <= 0 ? 'late' : left <= 5 ? 'near' : ''; } }
+function lose(sec, x = hero.wx, y = hero.wy + 4.6) { if (!clock.on) return; clock.t += sec; burst('-' + sec + ' SEC', x, y, .7, 1, 1.1); }
+function result() { const u = clock.t / clock.par, early = Math.floor(36 - clock.t / SPM);
+  const pay = (u <= 1 ? Math.round(300 - 200 * u) : Math.max(20, Math.round(100 - 240 * (u - 1)))) + (clock.tip && u <= 1 ? 50 : 0);
+  return u <= 1 ? `Delivered at ${clockTime()}, ${early} min to spare. Pay $${pay}${clock.tip ? ' (with tip)' : ' (no tip: the case was snatched)'}` : `Delivered LATE at ${clockTime()}. Pay docked to $${pay}`; }
+
+let xing = null, control = false, hudOn = false, time = 0, hitstop = 0, shake = 0, combo = 0, spot = null, fork = null;
 const balloons = [], bursts = [], captions = [], drops = [];
-const view = { cx: PAGE.w / 2, cy: PAGE.h / 2, D: 80, ox: -.14 }, focusOn = { panel: null, fill: .74, eye: null };
+const view = { cx: PAGE.w / 2, cy: PAGE.h / 2, D: 80, ox: .3 }, focusOn = { panel: null, fill: .74, eye: null };
 
 function focusPanel(p, fill = .74) { focusOn.panel = p; focusOn.fill = fill; focusOn.eye = null; for (const q of panels) q.want = q === p ? 1 : 0; }
 function enterPanel(p, fill) { p.seen = true; frameId = p.id; focusPanel(p, fill); }
@@ -243,29 +267,33 @@ function knock(e) {   // the hit that sends someone out of this frame and into a
   wait(.22).then(() => { k.p.seen = true; focusPanel(k.p); });
 }
 function heroHits(e) {
-  hero.hitDone = true; e.hp--; combo++;
+  hero.hitDone = true; if (e.hasCase) { e.hasCase = false; e.hp = 1; burst('GOT IT BACK!', e.x, e.wy + 5, .8, 1, 1.2); hint(''); } e.hp--; combo++;
   if (e.hp <= 0 && e.guard && e.guard()) e.hp = 1;
+  const pit = e.knockTo && e.knockTo.pit; if (pit && e.hp <= 0) e.hp = 1;   // he goes down the gap, not down to a punch
   if (e.hp <= 0 && e.knockTo) {   // he only leaves the frame the way the punch sends him
-    const k = e.knockTo, f = hero.face, lo = k.p.x0 + 3, hi = k.p.x1 - 3; let tx = k.fx != null ? k.fx : clamp(e.x + f * 4.5, lo, hi), ok = !k.dir || f === k.dir;
+    const k = e.knockTo, f = hero.face, lo = k.p.x0 + 1.9, hi = k.p.x1 - 1.9; let tx = k.fx != null ? k.fx : clamp(e.x + f * 4.5, lo, hi), ok = !k.dir || f === k.dir;
     if ((tx - e.x) * f < 0) { if (k.fx != null) ok = false; else { tx = clamp(e.x, lo, hi); if (Math.abs(tx - e.x) > .6) ok = false; } }
     if (ok) k.x = tx; else { e.hp = 1; e.held = true; } }
   const x = hero.x + hero.face * 1.55, y = hero.wy + 3.1;
   if (e.hp <= 0) { hitstop = .17; shake = .6; burst('KRAKK!', x, y + .3, 1.25, 2);
     if (e.knockTo) knock(e); else { e.set('down'); e.vx = hero.face * 7.5; e.vy = 7; e.ai = false; } }
   else if (e.held) { e.held = false; e.set('hurt'); e.st = 0; e.vx = hero.face * 5; hitstop = .085; shake = .35; burst(WORDS[combo % WORDS.length], x, y, 1, 0);
-    hint(e.knockTo.dir < 0 ? 'Knock him  ◀  that way, into the next frame!' : e.knockTo.dir > 0 ? 'Knock him that way  ▶  into the next frame!' : 'Knock him toward the middle!'); }
-  else { e.set('hurt'); e.st = 0; e.vx = hero.face * 3.6; hitstop = .085; shake = .35; burst(WORDS[combo % WORDS.length], x, y, 1, 0); }
+    const kd = e.knockTo.dir || Math.sign(e.knockTo.p.cx - e.x);
+    hint(kd < 0 ? 'Get behind him (jump over) and knock him  ◀  that way, into the next frame!' : 'Get behind him (jump over) and knock him that way  ▶  into the next frame!'); }
+  else { e.set('hurt'); e.st = 0; e.vx = hero.face * (pit ? (e.hp <= 3 ? 6 : 1.5) : 3.6); hitstop = .085; shake = .35; burst(WORDS[combo % WORDS.length], x, y, 1, 0);
+    if (pit && e.hp === 3) hint("He's reeling: now drive him back into the gap!"); }
 }
 function hurtHero(dir, word) {
   hero.hp--; hero.inv = .9; hero.vx = dir * 4.2; hitstop = .07; shake = .3;
   burst(word, hero.x, hero.wy + 2.7, .85, 1); hud();
   if (hero.hp <= 0) { hero.set('down'); hero.vy = 6;
-    wait(1.7).then(() => { hero.hp = 5; hero.inv = 1.6; if (hero.state === 'down') hero.set('idle'); hud(); if (hero.shown) shout(hero, 'Not today.', 1.3); }); }
+    lose(10); wait(1.7).then(() => { hero.hp = 5; hero.inv = 1.6; if (hero.state === 'down') hero.set('idle'); hud(); if (hero.shown) shout(hero, 'Not today.', 1.3); }); }
   else { hero.set('hurt'); hero.st = 0; }
 }
 function inReach(a, b) { const dx = (b.x - a.x) * a.face; return dx > .15 && dx < a.reach && Math.abs(a.y - b.y) < 1.5; }
 
 function playHero() {
+  if (xing && xing.live) return;
   let idle = hero.state === 'idle' || hero.state === 'walk';
   if (idle && !hero.grounded && !hero.hop) { hero.set('jump'); idle = false; }
   const air = hero.state === 'jump';
@@ -290,12 +318,15 @@ function playEnemy(e, dt) {
     case 'idle': case 'walk':
       e.face = Math.sign(dx) || e.face;
       if (dist > e.reach - .3) { const ok = floorAt(e.panel, e.x + e.face * .7, e.y) >= e.y - .3 && !e.panel.plats.some(b => b.solid && e.y < b.top - .25 && e.x + e.face * .9 > b.x0 && e.x + e.face * .9 < b.x1);
-        if (ok) { e.set('walk'); e.vx = e.face * e.speed; } else { e.set('idle'); e.vx = 0; } }
+        if (ok) { e.set('walk'); e.vx = e.face * e.speed; e.leapT = 0; } else { e.set('idle'); e.vx = 0;
+          if (e.leaps && e.grounded && level && (e.leapT = (e.leapT || 0) + dt) > .55) { e.leapT = 0;   // he jumps the gap to get at Milo
+            for (let d = .9; d < 5; d += .3) if (floorAt(e.panel, e.x + e.face * d, e.y) >= e.y - .3) { hop(e, e.panel, e.x + e.face * (d + 1.6), { h: 1.8, dur: .55 }); break; } } } }
       else { e.set('idle'); e.vx = 0; e.wait -= dt; if (e.wait <= 0 && level && hero.state !== 'down') e.set('wind'); }
       break;
     case 'wind': e.vx = 0; if (e.st > e.windT) { e.set('strike'); e.struck = false; } break;
     case 'strike':
-      if (!e.struck && e.st > .04 && hero.inv <= 0 && hero.state !== 'down' && inReach(e, hero)) { e.struck = true; hurtHero(e.face, 'THWACK!'); }
+      if (!e.struck && e.st > .04 && hero.inv <= 0 && hero.state !== 'down' && inReach(e, hero)) { e.struck = true; hurtHero(e.face, e.snatch ? 'YOINK!' : 'THWACK!');
+        if (e.snatch) { e.snatch = false; e.hasCase = true; e.ai = false; e.free = true; e.face = 1; e.vx = 3; e.set('walk'); hint('He has the case! Catch him and hit him!'); } }
       if (e.st > .3) { e.set('idle'); e.wait = .6 + Math.random() * .9; }
       break;
     case 'hurt': if (e.st > .32) { e.set('idle'); e.wait = .3 + Math.random() * .5; } break;
@@ -315,7 +346,55 @@ function addSpot(p, r, pos) { const mesh = put(new THREE.Mesh(new THREE.CircleGe
   mesh.renderOrder = p.base + 17; spot = { mesh, p, r, pos, heat: 0 }; }
 function addFork(p) { const mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(5.6, 4.4), clipMat({ map: tex(forkliftCanvas()), side: THREE.DoubleSide }, p.ref)));
   mesh.renderOrder = p.charOrder + .2; mesh.visible = false; fork = { mesh, p, x: 0, vx: 0 }; }
+// The avenue seen from above: lanes run up and down the frame and Milo crosses left to right.
+const LANE0 = 3, LANEW = 3.2;
+function roadCanvas(w, h) { const k = 40, c = document.createElement('canvas'); c.width = w * k; c.height = h * k; const g = c.getContext('2d');
+  g.fillStyle = '#23263a'; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = '#4b4763'; g.fillRect(0, 0, LANE0 * k, c.height); g.fillRect((LANE0 + 6 * LANEW) * k, 0, c.width, c.height);
+  g.fillStyle = '#31344d'; g.fillRect((LANE0 + 4 * LANEW) * k, 0, LANEW * k, c.height);
+  g.strokeStyle = '#8a8fa8'; g.lineWidth = 4; for (const u of [.25, .75]) { g.beginPath(); g.moveTo((LANE0 + (4 + u) * LANEW) * k, 0); g.lineTo((LANE0 + (4 + u) * LANEW) * k, c.height); g.stroke(); }
+  g.strokeStyle = '#d8d2bd'; g.lineWidth = 3; g.setLineDash([k * .8, k * .6]);
+  for (let i = 1; i < 6; i++) { g.beginPath(); g.moveTo((LANE0 + i * LANEW) * k, 0); g.lineTo((LANE0 + i * LANEW) * k, c.height); g.stroke(); }
+  return c; }
+function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function carCanvas(len, col) { const k = 48, c = document.createElement('canvas'); c.width = 1.8 * k; c.height = len * k; const g = c.getContext('2d'), W2 = c.width, H2 = c.height;
+  g.fillStyle = col; g.strokeStyle = '#0d0a12'; g.lineWidth = 5; rr(g, 4, 4, W2 - 8, H2 - 8, 14); g.fill(); g.stroke();
+  g.fillStyle = '#10142c'; g.fillRect(W2 * .18, Math.min(H2 * .2, 34), W2 * .64, 16); if (len < 4) g.fillRect(W2 * .18, H2 - 40, W2 * .64, 12);
+  g.fillStyle = '#fff3b0'; g.fillRect(W2 * .14, 6, 14, 7); g.fillRect(W2 * .86 - 14, 6, 14, 7);
+  return c; }
+function markerCanvas() { const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d');
+  g.fillStyle = '#5a3a1e'; g.strokeStyle = '#0d0a12'; g.lineWidth = 5; rr(g, 8, 32, 30, 34, 6); g.fill(); g.stroke();   // the bag
+  g.fillStyle = '#f2b21c'; g.beginPath(); g.ellipse(54, 48, 28, 38, 0, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#c98a0f'; g.beginPath(); g.arc(58, 48, 16, 0, 7); g.fill(); g.stroke();
+  return c; }
+async function crossing(p) {
+  enterPanel(p);
+  const flat = (w, h, canvas, order) => { const m = put(new THREE.Mesh(new THREE.PlaneGeometry(w, h), clipMat({ map: tex(canvas) }, p.ref))); m.renderOrder = p.base + order; return m; };
+  flat(p.w, p.h, roadCanvas(p.w, p.h), 8).position.set(p.cx, p.cy, 0);
+  const defs = [[-3, 2.4, 7, '#c9302c'], [3.6, 2.4, 7.5, '#3f7fd0'], [-5, 2.4, 8.5, '#e8e2d0'], [2.8, 5.2, 11, '#e09a1f'], [-9.5, 9, 24, '#7fb8a8'], [5.5, 2.4, 10, '#8a5ac0']];
+  const lanes = defs.map(([v, len, gap, col], i) => { const n = Math.ceil((p.h + 2 * len + 2) / gap) + 1, cv = tex(carCanvas(len, col));
+    return { v, len, cyc: n * gap, cx: LANE0 + (i + .5) * LANEW, cars: Array.from({ length: n }, (_, j) => {
+      const m = put(new THREE.Mesh(new THREE.PlaneGeometry(1.8, len), clipMat({ map: cv }, p.ref))); m.renderOrder = p.base + 9; m.scale.y = v > 0 ? 1 : -1; return { y: j * gap + i * 1.7, m }; }) }; });
+  const marker = flat(1.2, 1.2, markerCanvas(), 10);
+  xing = { p, lanes, marker, tx: 1.4, ty: p.h * .5, inv: 0, live: true };
+  focusOn.eye = () => [p.x0 + xing.tx, p.y0 + xing.ty];
+  hudOn = true; hud(); control = true; hint('Cross the avenue:  ◀ ▶  to move,  UP / DOWN  to dodge');
+  burst('HOOONK!', p.cx, p.y1 - 1.6, .8, 2, 1.2);
+  await until(() => xing.tx > LANE0 + 6 * LANEW + .8);
+  xing.live = false; marker.visible = false; control = false; hudOn = false; hud(); hint(''); await wait(.3);
+}
+function crossTick(dt) { const X = xing, p = X.p;
+  for (const l of X.lanes) for (const c of l.cars) { c.y += l.v * dt; if (c.y > p.h + l.len + 1) c.y -= l.cyc; else if (c.y < -l.len - 1) c.y += l.cyc; c.m.position.set(p.x0 + l.cx, p.y0 + c.y, ZACT); }
+  if (!X.live) return;
+  X.inv = Math.max(0, X.inv - dt);
+  if (control) { X.tx = clamp(X.tx + ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * 4.2 * dt, .7, p.w - .7); X.ty = clamp(X.ty + ((keys.jump ? 1 : 0) - (keys.down ? 1 : 0)) * 4.2 * dt, .8, p.h - .8); }
+  X.lanes.forEach((l, i) => { for (const c of l.cars) if (X.inv <= 0 && Math.abs(X.tx - l.cx) < 1.32 && Math.abs(X.ty - c.y) < l.len / 2 + .4) {
+    hero.hp--; X.inv = 1; shake = .5; hitstop = .07; burst(i === 4 ? 'CLANG!' : 'HONK!', p.x0 + X.tx, p.y0 + X.ty + 1.2, .8, 1); X.tx = LANE0 + i * LANEW;   // back to the lane line behind him
+    if (hero.hp <= 0) { hero.hp = 5; X.tx = 1.4; lose(10, p.x0 + X.tx + 2, p.y0 + X.ty + 1.5); } hud(); } });
+  X.marker.position.set(p.x0 + X.tx, p.y0 + X.ty, ZACT); X.marker.visible = !(X.inv > 0 && Math.floor(time * 14) % 2 === 0);
+}
 function things(dt) {
+  if (xing) crossTick(dt);
   for (let i = drops.length - 1; i >= 0; i--) { const d = drops[i]; d.vy -= 22 * dt; d.y += d.vy * dt; d.mesh.position.set(d.x, d.p.y0 + GROUND + d.y + .65, ZACT); d.mesh.rotation.z += dt * 2;
     const hit = hero.panel === d.p && hero.shown && hero.inv <= 0 && hero.state !== 'down' && Math.abs(hero.x - d.x) < .95 && d.y < hero.y + 3 && d.y > hero.y - .4;
     if (hit) hurtHero(Math.sign(hero.x - d.x) || 1, 'KLONK!');
@@ -330,21 +409,74 @@ function things(dt) {
 }
 
 // ---------- the level, page by page, written out like a script
+async function leapOff(p, vx = 5.5) { control = false; hint(''); hero.noRespawn = true; hero.free = true; hero.face = 1; hero.vx = vx; hero.vy = 11; hero.grounded = false; hero.set('jump');
+  await until(() => hero.x > p.x1 + 1.6 || hero.gone); hero.shown = false; hudOn = false; hud(); }
+// a dramatic cut-in in the middle of a played frame: cut away, tap through it, cut back
+async function cutIn(id, back) { const h = $('hint').textContent; control = false; hero.vx = 0; if (hero.state === 'walk') hero.set('idle');
+  await storyFrame(id, .4); enterPanel(back); control = true; hint(h); }
+
 async function page1() {
   for (const id of ['1.1', '1.2', '1.3', '1.4', '1.5']) await storyFrame(id);
-  const p = P['1.6']; enterPanel(p);
+  const p = P['1.6'], q = P['1.7']; enterPanel(p);
   await heroEnters(p, 2.2, 2.6);
   startAction('Arrow keys to run  •  Space to jump'); hudOn = false; hud();
-  wait(1.5).then(() => radio("Clock's running, kid."));
-  await until(() => hero.x > p.x0 + 18.9 && hero.grounded);
-  control = false; hint(''); hero.noRespawn = true; hero.free = true; hero.face = 1; hero.vx = 4.4; hero.set('walk');
-  await until(() => !hero.grounded); hero.vx = 1.4;
-  await until(() => hero.gone);
-  await storyFrame('1.7', .5);
+  wait(1.5).then(() => radio("Fourth floor, Calder Street.\nHe's expecting you.", 2.8));
+  await until(() => hero.x > p.x0 + 18.9 && hero.grounded && !hero.busy);
+  await endAction(); enterPanel(q); await hop(hero, q, q.x0 + 2.2, { y: -.75, h: 3, dur: .8 }); hero.face = 1;   // out of one frame and into the next
+  startAction('The big one: jump to the flagpole, then across'); hudOn = false; hud();
+  wait(1).then(() => shout(hero, 'Danny did this\nevery night.', 2.2, 'thought'));
+  await until(() => hero.x > q.x0 + 14.4 && hero.grounded && !hero.busy);
+  await endAction(); await wait(.8);
 }
 
 async function page2() {
-  const a = P['2.1'], b = P['2.3'], c = P['2.4'], d = P['2.5'];
+  const a = P['2.1'], b = P['2.3'], c = P['2.4'];
+  enterPanel(a); await heroEnters(a, 2.4); caption(a, 'Calder Street. 11:24 PM.');
+  startAction('Space to jump up the fire escape'); hudOn = false; hud();
+  await until(() => hero.y > 9.2 && hero.grounded && !hero.busy); await cutIn('2.2', a);
+  await until(() => hero.y > 18.5 && hero.grounded && !hero.busy);
+  await endAction(); enterPanel(b); await hop(hero, b, b.x0 + 1.6, { y: -.3, h: 2.2, dur: .95 }); hero.face = 1;
+  startAction('Along the ledge  •  mind the gaps and the flowerpots');
+  wait(.8).then(() => shout(hero, 'Who picks a pickup\nwith no front door?', 2.2, 'thought'));
+  let pot = 2.6;
+  await until(dt => { if (control && (pot -= dt) < 0) { pot = 2.3; dropCrate(b, hero.x + 1.7, hero.y + 6); } return hero.x > b.x0 + 16.6 && hero.grounded && !hero.busy; });
+  await endAction(); hero.shown = false; await wait(.4);
+  // the pickup
+  enterPanel(c); spawn(w1, c, c.w - 4.2, { face: -1, relaxed: true }); await heroEnters(c, 2.2);
+  await say(w1, "You're the courier?\nTake it. Quickly.");
+  hero.free = false; control = true; hint('Walk to the desk');
+  await until(() => hero.x > w1.x - 2.7); control = false; hero.vx = 0; hero.set('idle'); hero.face = 1;
+  hint('J or X: take the case'); pressed.punch = false; { let t = 0; await until(dt => pressed.punch || (AUTO && (t += dt) > .6)); } hint('');
+  burst('CLICK', hero.x + 1.2, hero.wy + 3, .7, 1, .9);
+  await say(w1, 'Only to her. Nobody else.\nGet it signed.'); await say(hero, "That's the job.");
+  clock.on = true; radio("Thirty-six minutes, kid.\nClock's running.", 2.6); await wait(2.4);
+  await walkTo(hero, c.x0 - 1.6, 3.6); hero.shown = false;
+  for (const id of ['2.5', '2.6', '2.7', '2.8']) await storyFrame(id);
+}
+
+async function page3() {
+  await storyFrame('3.1'); await crossing(P['3.2']); await storyFrame('3.3');
+  const b = P['3.4'], c = P['3.6']; enterPanel(b); await heroEnters(b, 1.6);
+  startAction('The far lanes are jammed: go over the top');
+  wait(1.2).then(() => shout(hero, 'Quicker than waiting\nfor the light.', 2, 'thought'));
+  await until(() => hero.x > b.x1 - 2.8 && hero.y > 2 && hero.grounded && !hero.busy);
+  await leapOff(b); await storyFrame('3.5');
+  // the back alleys and the bag-snatcher
+  enterPanel(c); spawn(w3, c, 16.5, { face: -1, hp: 3, shown: false }); await heroEnters(c, 2.2);
+  startAction('Vault the fences  ▶');
+  await until(() => hero.x > c.x0 + 9.5);
+  w3.shown = true; shout(w3, "Nice bag.\nI'll take it.", 1.6); arm(w3, { speed: 2.8, wait: .7 }); w3.snatch = true;
+  hint('If he lands a hit he grabs the case and runs');
+  wait(1.3).then(() => shout(hero, "It's not for you.", 1.4));
+  await until(() => (w3.state === 'down' && !w3.hasCase) || (w3.hasCase && w3.x > c.x1 + 1));
+  if (w3.hasCase) { w3.shown = false; w3.hasCase = false; clock.tip = false; lose(30); hint('He got a block away before Milo ran him down. Bonus lost.'); await wait(2.6); }
+  hint('Keep going  ▶');
+  await until(() => hero.x > c.x1 - 1.3 && hero.grounded && !hero.busy);
+  await endAction(); await walkTo(hero, c.x1 + 1.6, 4); hero.shown = false;
+}
+
+async function page4() {
+  const a = P['4.1'], b = P['4.3'], c = P['4.4'], d = P['4.5'];
   enterPanel(a);
   spawn(hero, a, -1.4, { relaxed: true }); spawn(thug, a, a.w + 1.4, { face: -1, shown: false, relaxed: true, hp: 4 });
   await wait(1.2); caption(a, 'The docks. 11:42 PM.');
@@ -354,10 +486,10 @@ async function page2() {
   await until(() => hero.x > a.x0 + 5.4);
   control = false; hint(''); hero.vx = 0; hero.set('idle'); hero.face = 1;
   thug.shown = true; await walkTo(thug, a.x1 - 2.7, 2.4); thug.face = -1;
-  await say(thug, 'End of the line, kid.\nHand over the package.');
+  await say(thug, 'End of the line, kid.\nHand over the case.');
   await say(hero, 'Sorry. It needs\na signature.');
   await say(thug, 'Why do they always\ntalk back...', 'thought');
-  await storyFrame('2.2', .6);
+  await storyFrame('4.2', .6);
   hero.shown = thug.shown = false;
   // round one
   enterPanel(b); caption(b, 'Pier 27. No witnesses.');
@@ -372,17 +504,17 @@ async function page2() {
   wait(2).then(async () => { await walkTo(goon, c.x0 + 2.3, 3); shout(goon, "Hey! That's\nmy brother!", 1.7); arm(goon, { wait: 1.2 }); });
   await until(() => goon.flown && !goon.hop);
   await endAction();
-  await storyFrame('2.5', .1);
-  await storyFrame('2.6'); await storyFrame('2.7');
+  await storyFrame('4.5', .1);
+  for (const id of ['4.6', '4.7', '4.8']) await storyFrame(id);   // the theft the player cannot stop
 }
 
-async function page3() {
-  if (QS.get('frame') !== '3.7') await page3a();
-  await page3b();
+async function page5() {
+  if (QS.get('frame') !== '5.7') await page5a();
+  await page5b();
 }
-async function page3a() {
-  await storyFrame('3.1');
-  const a = P['3.2'], b = P['3.3'];
+async function page5a() {
+  await storyFrame('5.1');
+  const a = P['5.2'], b = P['5.3'];
   enterPanel(a);
   spawn(w1, a, a.w - 3.4, { face: -1, hp: 3 }); spawn(w2, a, -1.4, { hp: 3, shown: false });
   w2.guard = () => w1.state !== 'down'; w2.knockTo = { p: b, dir: -1, word: 'THUD!' };
@@ -401,56 +533,73 @@ async function page3a() {
   hint('Keep going  ▶');
   await until(() => hero.x > b.x1 - 1.3 && hero.grounded && !hero.busy);
   await endAction(); await walkTo(hero, b.x1 + 1.6, 4); hero.shown = false;
-  await storyFrame('3.4'); await storyFrame('3.5'); await storyFrame('3.6');
+  await storyFrame('5.4'); await storyFrame('5.5'); await storyFrame('5.6');
 }
-async function page3b() {   // over the top
-  const c = P['3.7']; enterPanel(c);
-  spawn(w3, c, 24.5, { y: 1.4, face: -1, hp: 3 });
+async function page5b() {   // over the top, then the searchlight
+  const c = P['5.7'], d = P['5.8']; enterPanel(c);
+  spawn(w3, c, 22.5, { y: 1.4, face: -1, hp: 3 });
   await heroEnters(c, 2.2, .6);
   arm(w3, { reach: 2.7, windT: .55, speed: 2.0 });
-  addSpot(c, 2.3, t => [20 + 13 * Math.sin(t * .55), GROUND + 3.6]);
-  startAction('Run the container tops  •  stay out of the light');
+  startAction('Run the container tops  ▶');
   wait(2).then(() => radio('Six minutes, Milo.'));
-  await until(() => hero.x > c.x1 - 2.4 && hero.grounded && !hero.busy);
-  control = false; hint(''); hero.noRespawn = true; hero.free = true; hero.face = 1; hero.vx = 5.5; hero.vy = 11; hero.grounded = false; hero.set('jump');
-  await until(() => hero.x > c.x1 + 1.6 || hero.gone); hero.shown = false; hudOn = false; hud();
+  await until(() => hero.x > c.x1 - 1.5 && hero.grounded && !hero.busy);
+  await endAction(); enterPanel(d); await hop(hero, d, d.x0 + 1.6, { y: 1.4, h: 2, dur: .6 }); hero.face = 1;
+  addSpot(d, 1.9, t => [6.8 + 4.6 * Math.sin(t * .9), GROUND + 4.9]);
+  startAction('Go between sweeps of the light');
+  wait(.6).then(() => shout(hero, 'Wait for it...', 1.6, 'thought'));
+  await until(() => hero.x > d.x1 - 2.1 && hero.grounded && !hero.busy);
+  await leapOff(d);
 }
 
-async function page4() {
-  const a = P['4.1']; enterPanel(a);
+async function page6() {
+  const a = P['6.1'], bm = P['6.3']; enterPanel(a);
   await heroEnters(a, 2.4);
   caption(a, 'Crane 4. 11:55 PM.');
-  await say(hero, "Don't look down.", 'thought');
   addSpot(a, 2.1, t => [a.w / 2 + 3 * Math.sin(t * .9), GROUND + 10.5 + 8.5 * Math.sin(t * .37)]);
   startAction('Space to jump up  •  stay out of the light');
-  await until(() => hero.y > 18.5 && hero.grounded);
-  await endAction(); spot.mesh.visible = false; spot = null; await wait(.4);
-  await storyFrame('4.2'); hero.shown = false; await storyFrame('4.3');
+  await until(() => hero.y > 9.2 && hero.grounded && !hero.busy); await cutIn('6.2', a);
+  await until(() => hero.y > 18.5 && hero.grounded && !hero.busy);
+  await endAction(); spot.mesh.visible = false; spot = null;
+  // the boom
+  enterPanel(bm); await hop(hero, bm, bm.x0 + 1.8, { y: .8, h: 2.2, dur: .95 }); hero.face = 1;
+  startAction('Along the boom  •  the wind pushes you back');
+  wait(.8).then(() => shout(hero, 'Danny, what did you\nget into?', 2.2, 'thought'));
+  let g = 2.5;
+  await until(dt => { const was = g; g -= dt; if (g < -.9) g = 2 + Math.random(); else if (g < 0 && control) { if (was >= 0) burst('WHOOSH', hero.x + 2.5, hero.wy + 4, .7, 1, .8); hero.x -= 3.4 * dt; }
+    return hero.x > bm.x0 + 18 && hero.grounded && !hero.busy; });
+  await endAction(); hero.shown = false; await wait(.3);
+  await storyFrame('6.4');
   // the boss, part one
-  const b = P['4.4'], c = P['4.5']; enterPanel(b);
-  spawn(gage, b, b.w - 6, { face: -1, hp: 6 }); gage.knockTo = { p: c, dir: 0, word: 'KLANG!' };
+  const b = P['6.5'], c = P['6.6']; enterPanel(b);
+  spawn(gage, b, b.w - 6, { face: -1, hp: 6 }); gage.knockTo = { p: c, pit: true, word: 'KLANG!', h: .2 };
   await heroEnters(b, 2.6);
-  shout(gage, 'You should have dropped\nit at the gate.', 2); await wait(1.4);
-  arm(gage, { reach: 3.4, windT: .7, speed: 2.0 });
-  startAction('The hook is slow: dodge it, then hit');
-  await until(() => gage.flown && !gage.hop); gage.flown = false;
+  shout(gage, "The last courier didn't\nlisten either.", 2); await wait(1.4);
+  arm(gage, { reach: 3.4, windT: .7, speed: 2.0, leaps: true });
+  startAction('The hook is slow: dodge it, then hit  •  mind the gap');
+  await until(() => { if (gage.knockTo && !gage.hop && gage.y < -1) { gage.knockTo.x = clamp(gage.x, c.x0 + 2, c.x1 - 2); knock(gage); }   // down through the gap and into the frame below
+    return gage.flown && !gage.hop; }); gage.flown = false; gage.leaps = false;
   await diveAfter(c, clamp(gage.x - 4.5, c.x0 + 2, c.x1 - 3), 'Space: jump down after him');
   // part two
-  gage.set('idle'); gage.hp = 5; shout(gage, "I'll throw you in\nthe harbor myself!", 1.8);
+  gage.set('idle'); gage.hp = 5; shout(hero, 'What last courier?!', 1.6); wait(1.7).then(() => { if (gage.state !== 'down') shout(gage, "I'll throw you in\nthe harbor myself!", 1.8); });
   arm(gage, { reach: 2.05, windT: .3, speed: 3.6, wait: 1.4 }); startAction('');
   await until(() => gage.state === 'down' && gage.grounded);
   await wait(.8); await endAction();
-  await storyFrame('4.6');
+  await storyFrame('6.7');
 }
 
-async function page5() {
-  for (const id of ['5.1', '5.2', '5.3', '5.4']) await storyFrame(id);
-  enterPanel(P['5.5'], .5); await wait(1.8);
-  await storyFrame('5.6', 1.2);
+async function page7() {
+  const a = P['7.1']; enterPanel(a); caption(a, '11:58 PM.');
+  await heroEnters(a, 2);
+  startAction('RUN!  Jump the ropes'); hudOn = false; hud();
+  await until(() => hero.x > a.x1 - 2.4 && hero.grounded && !hero.busy);
+  await endAction(); clock.on = false;
+  for (const id of ['7.2', '7.3', '7.4', '7.5', '7.6']) await storyFrame(id);
+  enterPanel(P['7.7'], .5); await wait(1.8);
+  await storyFrame('7.8', 1.2);
   focusPanel(null); frameId = 'end'; for (const q of panels) q.want = 1;
-  hint(`End of ${LEVEL.series} #${LEVEL.issue}, "${LEVEL.title}".  To be continued...  Press R to read it again`);
+  hint(`${result()}  •  End of ${LEVEL.series} #${LEVEL.issue}. To be continued...  Press R to read it again`);
 }
-const PAGES = [page1, page2, page3, page4, page5];
+const PAGES = [page1, page2, page3, page4, page5, page6, page7];
 
 async function turnPage(n) {
   const pg = LEVEL.pages[n], w = $('wipe');
@@ -462,6 +611,7 @@ async function turnPage(n) {
   wait(.6).then(() => { w.style.transition = 'none'; w.style.transform = 'translateX(105%)'; });
 }
 async function run(start) {
+  if (start >= 2) { clock.on = true; clock.t = [0, 0, 9, 18, 25, 31, 34][start] * SPM; }
   for (let n = start; n < PAGES.length; n++) { if (n > start) await turnPage(n); await PAGES[n](); await wait(.6); }
 }
 
@@ -475,29 +625,31 @@ function frame(dtReal) {
   for (let i = waits.length - 1; i >= 0; i--) if (waits[i].fn(dt)) { const w = waits[i]; waits.splice(i, 1); w.r(); }
   if (dt > 0) { playHero(); for (const e of foes) playEnemy(e, dt); for (const c of chars) c.tick(dt, time); things(dt); }
   if (dt > 0) for (const e of foes) {   // fighters can't stand inside each other
-    if (!e.shown || e.ghost || e.hop || e.state === 'down' || hero.state === 'down' || e.panel !== hero.panel || Math.abs(hero.y - e.y) > 1.6) continue;
+    if (!e.shown || e.ghost || e.hop || e.state === 'down' || hero.state === 'down' || e.panel !== hero.panel || !hero.grounded || Math.abs(hero.y - e.y) > 1.6) continue;   // he can jump over them
     const dx = hero.x - e.x, gap = 1.05;
     if (Math.abs(dx) < gap) { const push = (gap - Math.abs(dx)) * (dx >= 0 ? 1 : -1); hero.x += push * .6; e.x -= push * .4; }
   }
+  if (clock.on && control && dt > 0) clock.t += dt;
+  showClock();
   for (const k in pressed) pressed[k] = false;
 
   // focus: the active frame sharpens, the rest fall soft; teasers fade once a frame is reached
   const kf = 1 - Math.exp(-dtR * 4);
-  for (const p of panels) { p.focus += (p.want - p.focus) * kf; p.tease += ((p.seen ? 0 : 1) - p.tease) * kf;
+  for (const p of panels) { p.focus += (p.want - p.focus) * kf; p.tease += ((p === focusOn.panel ? 0 : 1) - p.tease) * kf;   // any frame not being played shows its freeze frame, before and after
     for (const m of p.mats) m.uniforms.focus.value = p.focus; if (p.teaser) p.teaser.uniforms.alpha.value = p.tease;
-    for (const m of p.blocks) m.color.setScalar(.6 + .4 * p.focus); }
+    for (const m of p.blocks) m.color.setScalar(.84 + .16 * p.focus); }
   for (const m of rainMats) m.uniforms.off.value.set(-time * .35 % 1, time * 1.7 % 1);
 
   // camera: frame the active panel, lean with the hero so the depth shifts
   const fp = focusOn.panel, th = Math.tan(FOV * Math.PI / 360), asp = camera.aspect;
-  let gx = PAGE.w / 2, gy = PAGE.h / 2, gD = Math.max(PAGE.h / (2 * th), PAGE.w / (2 * th * asp)) / .95, gox = -.14;
+  let gx = PAGE.w / 2, gy = PAGE.h / 2, gD = Math.max(PAGE.h / (2 * th), PAGE.w / (2 * th * asp)) / .95, gox = .3;
   if (fp) {
     const eye = focusOn.eye ? focusOn.eye() : (hero.panel === fp && hero.shown ? [hero.x, hero.wy + 1.8] : null), tr = fp.def.track;
     const Dh = fp.h / (2 * th), Dw = fp.w / (2 * th * asp); let f = 0; gx = fp.cx; gy = fp.cy;
     if (tr === 'x' && Dw > Dh / .6) { gD = Dh / .6; const hv = gD * th * asp * .82; gx = clamp(eye ? eye[0] : fp.cx, fp.x0 + hv, fp.x1 - hv); f = (gx - fp.cx) / (fp.w / 2); }
     else if (tr === 'y' && Dh > Dw / .4) { gD = Dw / .4; const hv = gD * th * .82; gy = clamp(eye ? eye[1] : fp.cy, fp.y0 + hv, fp.y1 - hv); }
     else { gD = Math.max(Dh, Dw) / focusOn.fill; if (eye) { f = clamp((eye[0] - fp.cx) / (fp.w / 2), -1, 1); gx = fp.cx + f * fp.w * .06; } }
-    gox = -.14 + .09 * f;
+    gox = .3 + .06 * f;
   }
   const kc = 1 - Math.exp(-dtR * 3.2);
   view.cx += (gx - view.cx) * kc; view.cy += (gy - view.cy) * kc; view.D += (gD - view.D) * kc; view.ox += (gox - view.ox) * kc;
@@ -515,12 +667,12 @@ function frame(dtReal) {
   const ppu = Math.hypot(b[0] - a[0], b[1] - a[1]), rot = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI, sc = ppu * UNIT;
   for (const o of balloons) {
     if (o.c) { const c = o.c, p = c.panel; if (!p) continue; const rxW = o.b.rx * UNIT, ryW = o.b.ry * UNIT, headY = c.wy + 3.6;
-      const bx = clamp(c.x + Math.sign(p.cx - c.x) * rxW * .55, p.x0 + rxW + .35, Math.max(p.x0 + rxW + .35, p.x1 - rxW - .35)), by = Math.min(headY + .6 + ryW, p.y1 - ryW - .35);
+      const bx = clamp(c.x + Math.sign(p.cx - c.x) * rxW * .55, p.x0 + rxW + .35, Math.max(p.x0 + rxW + .35, p.x1 - rxW - .35)), by = Math.min(headY + .6 + ryW, p.y1 - ryW - .35 + (p.h < 7 ? ryW * 2 : 0));   // in a shallow frame the balloon breaks out over the top border instead of covering him
       const s = scr(bx, by, ZACT), t = scr(c.x + c.face * .15, headY + .1, ZACT); o.b.set(s[0], s[1], sc, rot, t[0], t[1]); }
     else { const s = scr(o.fx, o.fy), t = scr(o.tx, o.ty); o.b.set(s[0], s[1], sc * o.k, rot, t[0], t[1]); } }
   const visL = view.cx - view.D * th * asp * .9;
   for (const o of captions) { const p = o.p, x = p.def.track === 'x' && p === fp ? clamp(visL, p.x0 + .3, p.x1 - 9) : p.x0 + .3, s = scr(x, p.y1 - .3 - o.i * .95);
-    o.b.set(s[0], s[1], sc * 1.15, rot, .55 + .45 * p.focus, (1 - p.focus) * 5); }
+    o.b.set(s[0], s[1], sc * 1.15, rot, .7 + .3 * p.focus, (1 - p.focus) * 2); }
   for (let i = bursts.length - 1; i >= 0; i--) { const o = bursts[i]; o.t += dtR;
     const u = Math.min(1, o.t / .13), pop = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2), s = scr(o.x, o.y, ZACT), fade = o.life - .22;
     o.b.set(s[0], s[1], sc * .92 * o.size * pop, rot + o.rot, o.t > fade ? Math.max(0, 1 - (o.t - fade) / .22) : 1);
@@ -548,6 +700,7 @@ async function boot() {
   const loop = now => { frame((now - last) / 1000); last = now; requestAnimationFrame(loop); };
   requestAnimationFrame(loop);
   window.__game = { hero, chars, view, keys, pressed, focusPanel, get P() { return P; }, get panels() { return panels; }, get foes() { return foes; },
+    get xing() { return xing; }, clock,
     get at() { return { page: pageNo + 1, frame: frameId, control, hp: hero.hp, x: +(hero.x - (hero.panel ? hero.panel.x0 : 0)).toFixed(2), y: +hero.y.toFixed(2), state: hero.state }; } };
   await wait(1.2);
   run(start).catch(e => console.error(e));
