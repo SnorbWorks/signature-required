@@ -12,6 +12,14 @@
     -webkit-user-select: none; user-select: none; }
   #gl, #ink { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   #ink { pointer-events: none; }
+  /* the lens: sharp in the middle of the screen, blurring toward the edges, over the whole page (borders included) but under the lettering */
+  .vig { position: fixed; inset: 0; pointer-events: none; }
+  #vigA { -webkit-backdrop-filter: blur(1.6px); backdrop-filter: blur(1.6px);
+    -webkit-mask-image: linear-gradient(to right, #000, transparent 17%, transparent 83%, #000), linear-gradient(to bottom, #000, transparent 17%, transparent 83%, #000);
+    mask-image: linear-gradient(to right, #000, transparent 17%, transparent 83%, #000), linear-gradient(to bottom, #000, transparent 17%, transparent 83%, #000); }
+  #vigB { -webkit-backdrop-filter: blur(4.5px); backdrop-filter: blur(4.5px);
+    -webkit-mask-image: linear-gradient(to right, #000, transparent 9%, transparent 91%, #000), linear-gradient(to bottom, #000, transparent 9%, transparent 91%, #000);
+    mask-image: linear-gradient(to right, #000, transparent 9%, transparent 91%, #000), linear-gradient(to bottom, #000, transparent 9%, transparent 91%, #000); }
   #hint { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) rotate(-1.5deg);
     background: #f2b632; color: #0d0a12; border: 3px solid #0d0a12; padding: 6px 16px;
     font: italic 700 clamp(15px, 1.25vw, 26px) "Comic Neue", "Chalkboard SE", "Comic Sans MS", sans-serif;
@@ -50,6 +58,7 @@
 </head>
 <body>
 <canvas id="gl"></canvas>
+<div class="vig" id="vigA"></div><div class="vig" id="vigB"></div>
 <svg id="ink" xmlns="http://www.w3.org/2000/svg"></svg>
 <div id="hud"></div>
 <div id="clock"></div>
