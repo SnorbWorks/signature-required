@@ -78,7 +78,7 @@ async function buildPage(n) {
   const defs = LEVEL.pages[n].panels.map(d => ({ sharp: true, scene: d.kind === 'caption' ? 'end' : 'storyph', seed: Math.round(parseFloat(d.id) * 10), ...d, ...(GAME[d.id] || {}) }));
   const artFor = {};
   for (const d of defs) { const a = (manifest.panels || {})[d.id]; if (!a) continue; artFor[d.id] = {};
-    for (const k in a) if (k === 'lettered') d.lettered = true; else artFor[d.id][k] = imgCache[a[k]] || (imgCache[a[k]] = await loadImage('./art/' + a[k])); }
+    for (const k in a) if (k === 'lettered') d.lettered = true; else if (k === 'poi') artFor[d.id].poi = a.poi; else artFor[d.id][k] = imgCache[a[k]] || (imgCache[a[k]] = await loadImage('./art/' + a[k])); }
   const rainTex = tex(rainCanvas(), true);
   const inkMat = new THREE.MeshBasicMaterial({ color: 0x0d0a12, transparent: true, depthTest: false, depthWrite: false });
   panels = defs.map((def, i) => {
@@ -219,6 +219,8 @@ let xing = null, control = false, hudOn = false, time = 0, hitstop = 0, shake = 
 const balloons = [], bursts = [], captions = [], drops = [];
 const view = { cx: PAGE.w / 2, cy: PAGE.h / 2, D: 80, ox: .3 }, focusOn = { panel: null, fill: .74, eye: null };
 
+// the subject of a frame's picture (marked per picture in the art list), so a small screen knows what to keep in shot
+function poiOf(p) { const a = manifest.panels && manifest.panels[p.id]; return a && a.poi ? [p.x0 + a.poi[0] * p.w, p.y1 - a.poi[1] * p.h] : null; }
 function focusPanel(p, fill = .74) { focusOn.panel = p; focusOn.fill = fill; focusOn.eye = null; for (const q of panels) q.want = q === p ? 1 : 0; }
 function enterPanel(p, fill) { p.seen = true; frameId = p.id; focusPanel(p, fill); }
 function walkTo(c, x, sp = 3) { c.free = true; c.face = Math.sign(x - c.x) || 1; c.vx = c.face * sp; c.set('walk');
@@ -243,7 +245,8 @@ function parseLine(s) { let m;
 // A story frame: the camera settles on the illustration and the reader taps through its lettering.
 async function storyFrame(id, hold = .9) {
   const p = P[id]; enterPanel(p, .8);
-  if (p.def.track === 'x') { let u = 0; focusOn.eye = () => { u = Math.min(1, u + .0022); const e = u * u * (3 - 2 * u); return [p.x0 + p.w * (.15 + .7 * e), p.cy]; }; }
+  if (p.def.track === 'x') { let u = 0; const a = poiOf(p), end = a ? (a[0] - p.x0) / p.w : .85, start = end > .5 ? .15 : .85;   // the pan ends on the subject
+    focusOn.eye = () => { u = Math.min(1, u + .0022); const e = u * u * (3 - 2 * u); return [p.x0 + p.w * (start + (end - start) * e), a ? a[1] : p.cy]; }; }
   await wait(hold);
   let n = 0, cur = null, k = clamp(p.w / 12, .62, 1);
   for (const s of p.def.lettered ? [] : p.def.lines) { const l = parseLine(s);
@@ -642,14 +645,19 @@ function frame(dtReal) {
 
   // camera: frame the active panel, lean with the hero so the depth shifts
   const fp = focusOn.panel, th = Math.tan(FOV * Math.PI / 360), asp = camera.aspect;
-  let gx = PAGE.w / 2, gy = PAGE.h / 2, gD = Math.max(PAGE.h / (2 * th), PAGE.w / (2 * th * asp)) / .95, gox = .3;
+  let gx = PAGE.w / 2, gy = PAGE.h / 2, gD = Math.max(PAGE.h / (2 * th), PAGE.w / (2 * th * asp)) / .95, gox = asp < 1 ? .15 : .3;
   if (fp) {
-    const eye = focusOn.eye ? focusOn.eye() : (hero.panel === fp && hero.shown ? [hero.x, hero.wy + 1.8] : null), tr = fp.def.track;
+    const eye = focusOn.eye ? focusOn.eye() : poiOf(fp) || (hero.panel === fp && hero.shown ? [hero.x, hero.wy + 1.8] : null), tr = fp.def.track, kx = asp < 1 ? .45 : .6;
     const Dh = fp.h / (2 * th), Dw = fp.w / (2 * th * asp); let f = 0; gx = fp.cx; gy = fp.cy;
-    if (tr === 'x' && Dw > Dh / .6) { gD = Dh / .6; const hv = gD * th * asp * .82; gx = clamp(eye ? eye[0] : fp.cx, fp.x0 + hv, fp.x1 - hv); f = (gx - fp.cx) / (fp.w / 2); }
+    if (tr === 'x' && Dw > Dh / kx) { gD = Dh / kx; const hv = gD * th * asp * .82; gx = clamp(eye ? eye[0] : fp.cx, fp.x0 + hv, fp.x1 - hv); f = (gx - fp.cx) / (fp.w / 2); }
     else if (tr === 'y' && Dh > Dw / .4) { gD = Dw / .4; const hv = gD * th * .82; gy = clamp(eye ? eye[1] : fp.cy, fp.y0 + hv, fp.y1 - hv); }
-    else { gD = Math.max(Dh, Dw) / focusOn.fill; if (eye) { f = clamp((eye[0] - fp.cx) / (fp.w / 2), -1, 1); gx = fp.cx + f * fp.w * .06; } }
-    gox = .3 + .06 * f;
+    else {   // show the whole frame when it fits; on a screen where it would end up tiny (a phone), move in and keep the subject in shot
+      gD = Math.min(Math.max(Dh, Dw) / focusOn.fill, Math.min(Dh, Dw) / (Dw > Dh ? .4 : .3));
+      const hx = gD * th * asp * .84, hy = gD * th * .84;
+      if (fp.w / 2 > hx) { gx = clamp(eye ? eye[0] : fp.cx, fp.x0 + hx, fp.x1 - hx); f = (gx - fp.cx) / (fp.w / 2); }
+      else if (eye) { f = clamp((eye[0] - fp.cx) / (fp.w / 2), -1, 1); gx = fp.cx + f * fp.w * .06; }
+      if (fp.h / 2 > hy) gy = clamp(eye ? eye[1] : fp.cy, fp.y0 + hy, fp.y1 - hy); }
+    gox = (asp < 1 ? .15 : .3) + .06 * f;   // an upright phone leans less, or the frame's near edge runs off the narrow screen
   }
   const kc = 1 - Math.exp(-dtR * 3.2);
   view.cx += (gx - view.cx) * kc; view.cy += (gy - view.cy) * kc; view.D += (gD - view.D) * kc; view.ox += (gox - view.ox) * kc;
@@ -665,11 +673,12 @@ function frame(dtReal) {
   // lettering rides on top, lined up with the tilted page
   const a = scr(view.cx, view.cy), b = scr(view.cx + 1, view.cy);
   const ppu = Math.hypot(b[0] - a[0], b[1] - a[1]), rot = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI, sc = ppu * UNIT;
+  const keep = (s, hw, hh) => { if (2 * hw < W - 12) s[0] = clamp(s[0], hw + 6, W - hw - 6); if (2 * hh < H - 110) s[1] = clamp(s[1], hh + 48, H - hh - 62); return s; };   // lettering never leaves the screen
   for (const o of balloons) {
     if (o.c) { const c = o.c, p = c.panel; if (!p) continue; const rxW = o.b.rx * UNIT, ryW = o.b.ry * UNIT, headY = c.wy + 3.6;
       const bx = clamp(c.x + Math.sign(p.cx - c.x) * rxW * .55, p.x0 + rxW + .35, Math.max(p.x0 + rxW + .35, p.x1 - rxW - .35)), by = Math.min(headY + .6 + ryW, p.y1 - ryW - .35 + (p.h < 7 ? ryW * 2 : 0));   // in a shallow frame the balloon breaks out over the top border instead of covering him
-      const s = scr(bx, by, ZACT), t = scr(c.x + c.face * .15, headY + .1, ZACT); o.b.set(s[0], s[1], sc, rot, t[0], t[1]); }
-    else { const s = scr(o.fx, o.fy), t = scr(o.tx, o.ty); o.b.set(s[0], s[1], sc * o.k, rot, t[0], t[1]); } }
+      const s = keep(scr(bx, by, ZACT), o.b.rx * sc, o.b.ry * sc), t = scr(c.x + c.face * .15, headY + .1, ZACT); o.b.set(s[0], s[1], sc, rot, t[0], t[1]); }
+    else { const s = keep(scr(o.fx, o.fy), o.b.rx * sc * o.k, o.b.ry * sc * o.k), t = scr(o.tx, o.ty); o.b.set(s[0], s[1], sc * o.k, rot, t[0], t[1]); } }
   const visL = view.cx - view.D * th * asp * .9;
   for (const o of captions) { const p = o.p, x = p.def.track === 'x' && p === fp ? clamp(visL, p.x0 + .3, p.x1 - 9) : p.x0 + .3, s = scr(x, p.y1 - .3 - o.i * .95);
     o.b.set(s[0], s[1], sc * 1.15, rot, .7 + .3 * p.focus, (1 - p.focus) * 2); }

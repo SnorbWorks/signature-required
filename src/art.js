@@ -231,7 +231,7 @@ export function panelLayers(def, art) {
   const w = def.r[2] - def.r[0], h = def.r[3] - def.r[1], L = [], q = def.sharp ? 1 : .32;
   const add = (d, ppu, fn, band) => { const m = layerCtx(w, h, d, ppu * q, band); fn(m); L.push({ d, canvas: m.c, plane: m.plane, blur: m.k * .2 }); };
   const sd = def.seed || 1;
-  if (art && art.story) { add(.6, 110, m => coverPanel(m, art.story)); return L; }   // one composed illustration
+  if (art && art.story) { add(.6, 110, m => coverPanel(m, art.story, art.poi)); return L; }   // one composed illustration
   if (art && art.far) {     // painted artwork: a far backdrop and a near cut-out with the ground
     add(9, 70, m => cover(m, art.far, .5));
     if (art.mid) add(4, 90, m => cover(m, keyGreen(art.mid), 1));
@@ -394,7 +394,8 @@ export function forkliftCanvas() {
 }
 
 // Fits a picture to the visible frame (a little oversize so the depth shift never shows its edge).
-function coverPanel(m, img) { const o = .4, x0 = m.X(-o), x1 = m.X(m.w + o), y0 = m.Y(m.h + o), y1 = m.Y(-o), bw = x1 - x0, bh = y1 - y0;
+function coverPanel(m, img, poi) { const ax = poi ? poi[0] : .5, ay = poi ? poi[1] : .5;   // crop toward the picture's subject, never through it
+  const o = .4, x0 = m.X(-o), x1 = m.X(m.w + o), y0 = m.Y(m.h + o), y1 = m.Y(-o), bw = x1 - x0, bh = y1 - y0;
   const s = Math.max(bw / img.width, bh / img.height), w = img.width * s, h = img.height * s;
   m.g.fillStyle = INK; m.g.fillRect(0, 0, m.W, m.H);
-  m.g.save(); m.g.beginPath(); m.g.rect(x0, y0, bw, bh); m.g.clip(); m.g.drawImage(img, x0 + (bw - w) / 2, y0 + (bh - h) / 2, w, h); m.g.restore(); }
+  m.g.save(); m.g.beginPath(); m.g.rect(x0, y0, bw, bh); m.g.clip(); m.g.drawImage(img, x0 + (bw - w) * ax, y0 + (bh - h) * ay, w, h); m.g.restore(); }
