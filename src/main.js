@@ -190,9 +190,9 @@ addEventListener('keydown', e => { if (e.code === 'KeyR') location.reload(); con
   if (!keys[k]) { pressed[k] = true; if (k !== 'left' && k !== 'right' && k !== 'down') pressed.ok = true; } keys[k] = true; });
 addEventListener('keyup', e => { const k = MAP[e.code]; if (k) keys[k] = false; });
 $('gl').addEventListener('pointerdown', () => { pressed.ok = true; });
-for (const [id, k] of [['bL', 'left'], ['bR', 'right'], ['bJ', 'jump'], ['bP', 'punch']]) {
+for (const [id, k] of [['bL', 'left'], ['bR', 'right'], ['bJ', 'jump'], ['bP', 'punch'], ['bD', 'down']]) {
   const b = $(id);
-  b.addEventListener('pointerdown', e => { e.preventDefault(); keys[k] = true; pressed[k] = true; if (k !== 'left' && k !== 'right') pressed.ok = true; });
+  b.addEventListener('pointerdown', e => { e.preventDefault(); keys[k] = true; pressed[k] = true; if (k !== 'left' && k !== 'right' && k !== 'down') pressed.ok = true; });
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => { keys[k] = false; });
 }
 
@@ -378,10 +378,10 @@ async function crossing(p) {
   const marker = flat(1.2, 1.2, markerCanvas(), 10);
   xing = { p, lanes, marker, tx: 1.4, ty: p.h * .5, inv: 0, live: true };
   focusOn.eye = () => [p.x0 + xing.tx, p.y0 + xing.ty];
-  hudOn = true; hud(); control = true; hint('Cross the avenue:  ◀ ▶  to move,  UP / DOWN  to dodge');
+  hudOn = true; hud(); control = true; hint('Cross the avenue:  ◀ ▶  to move,  UP / DOWN  to dodge'); $('bD').style.display = '';
   burst('HOOONK!', p.cx, p.y1 - 1.6, .8, 2, 1.2);
   await until(() => xing.tx > LANE0 + 6 * LANEW + .8);
-  xing.live = false; marker.visible = false; control = false; hudOn = false; hud(); hint(''); await wait(.3);
+  $('bD').style.display = 'none'; xing.live = false; marker.visible = false; control = false; hudOn = false; hud(); hint(''); await wait(.3);
 }
 function crossTick(dt) { const X = xing, p = X.p;
   for (const l of X.lanes) for (const c of l.cars) { c.y += l.v * dt; if (c.y > p.h + l.len + 1) c.y -= l.cyc; else if (c.y < -l.len - 1) c.y += l.cyc; c.m.position.set(p.x0 + l.cx, p.y0 + c.y, ZACT); }
