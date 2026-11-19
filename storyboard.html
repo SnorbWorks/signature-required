@@ -57,8 +57,9 @@ LEVEL.pages.forEach((pg, i) => {
     (p.view ? `<p><b>Played from</b> ${esc(p.view)}</p>` : '') + `<p><b>Shot</b> ${esc(p.shot)}</p><p><b>What happens</b> ${esc(p.beat)}</p>` +
     (p.teaser ? `<p><b>Teaser while out of focus</b> ${esc(p.teaser)}</p>` : '') +
     (p.exit ? `<p><span class="exit"><b>Hand-over</b> ${esc(p.exit)}</span></p>` : '') +
-    (p.lines.length ? `<div class="lines">${p.lines.map(l => `<div>${esc(l)}</div>`).join('')}</div>` : '') + '</div>';
-  html += `<section><h2>Page ${i + 1}: ${esc(pg.title)}<small>${pg.time}</small></h2>${svg}<div class="list">${cards}</div></section>`;
+    (p.lines.length ? `<div class="lines">${p.lines.map(l => `<div>${esc(l)}</div>`).join('')}</div>` : '') +
+    (p.variants ? Object.entries(p.variants).map(([k, v]) => `<p style="margin-top:8px"><b>${{ won: 'If he fought and won', fled: 'If he got away', robbed: 'If he was robbed' }[k]}: ${esc(v.name)}</b> ${esc(v.shot)}</p><div class="lines">${v.lines.map(l => `<div>${esc(l)}</div>`).join('')}</div>`).join('') : '') + '</div>';
+  html += `<section><h2>${pg.label || 'Page ' + (i + 1 - LEVEL.pages.filter(q => q.label).length)}: ${esc(pg.title)}<small>${pg.time}</small></h2>${svg}<div class="list">${cards}</div></section>`;
 });
 document.getElementById('m').innerHTML = html;
 document.getElementById('rules').innerHTML = (LEVEL.rules || []).map(r => { const i = r.indexOf(':');
