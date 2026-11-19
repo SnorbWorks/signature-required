@@ -15,6 +15,13 @@ export const STYLES = {
           shoe: '#3a2c22', hand: '#c89472', hair: 'cap', bulk: 50 },
   worker: { skin: '#d2a07c', top: '#d9691e', topSh: '#a84c12', legs: '#27304f', legsSh: '#1b2238',
           shoe: '#3a2c22', hand: '#d2a07c', hair: 'hat', hat: '#f2c21c', bulk: 52 },
+  // stand-ins until their pose sheets are drawn
+  tax1: { skin: '#d6a37e', top: '#3f7a4a', topSh: '#2b5633', legs: '#2b2b33', legsSh: '#1d1d24', shoe: '#e8e2d0', hand: '#d6a37e', hair: 'cap', bulk: 44 },
+  tax2: { skin: '#b9825f', top: '#b3312c', topSh: '#7f211e', legs: '#1f2638', legsSh: '#151a28', shoe: '#2a2018', hand: '#b9825f', hair: 'beanie', bulk: 50 },
+  corner1: { skin: '#c99672', top: '#6a3f8f', topSh: '#492a64', legs: '#2c2c36', legsSh: '#1e1e26', shoe: '#3a2c22', hand: '#c99672', hair: 'beanie', bulk: 56 },
+  corner2: { skin: '#e0b08c', top: '#4a6f9c', topSh: '#334d6e', legs: '#30303a', legsSh: '#212129', shoe: '#c9302c', hand: '#e0b08c', hair: 'cap', bulk: 44 },
+  brick: { skin: '#c08a68', top: '#1c1c22', topSh: '#101015', legs: '#26262e', legsSh: '#18181f', shoe: '#15151a', hand: '#c08a68', hair: 'beanie', bulk: 70 },
+  keeper: { skin: '#d9a982', top: '#3e8f8a', topSh: '#2a6460', legs: '#3a3327', legsSh: '#28231b', shoe: '#2a2018', hand: '#d9a982', hair: 'cap', bulk: 52 },
   gage: { skin: '#c98f6d', top: '#2f3f4f', topSh: '#1f2a36', legs: '#22222c', legsSh: '#16161d',
           shoe: '#2a2018', hand: '#c98f6d', hair: 'hat', hat: '#e8e2d0', bulk: 64 },
 };
@@ -168,6 +175,7 @@ export function frameFor(c) {
     case 'walk': { const cy = c.pup.cycle; if (cy) return cy[Math.floor(c.phase / (Math.PI * 2) * cy.length) % cy.length];
       return Math.floor(c.phase / Math.PI) % 2 ? 'walkB' : 'walkA'; }
     case 'jump': return 'jump';
+    case 'block': case 'dodge': return 'stance';
     case 'punch': return c.st > .06 && c.st < .25 ? 'punch' : 'stance';
     case 'wind': return 'wind';
     case 'strike': return 'punch';

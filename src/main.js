@@ -7,6 +7,7 @@ import { panelLayers, paperCanvas, rainCanvas, blurred, loadImage, artLayer, blo
 import { Puppet, STYLES, poseFor, lerpPose, frameFor, sliceSprites, CW, CH, BASE, PPU } from './puppet.js';
 import { Lettering } from './letters.js';
 import { LEVEL } from './level1.js';
+const OPEN = LEVEL.pages.filter(q => q.label).length;   // pages before page 1: the prologue and tonight's earlier route
 
 const PAGE = { w: 42, h: 27 };
 const SOFT = .28;   // how soft the frames out of focus are (1 = the old heavy blur)
@@ -24,6 +25,14 @@ const fire = []; for (let i = 1; i <= 11; i++) fire.push(i % 3 === 0 ? (i % 2 ? 
 fire.push([.6, 9.2, 12 * 1.55, 'steel', false]);
 const FLOOR = [-60, 100, 0, 'steel', false];
 const GAME = {
+  'P0.1': { track: 'x' },
+  'P0.2': { scene: 'roofs', seed: 61, plats: [[-6, 9.4, 2.2, 'roof'], [11, 16.6, 2.2, 'roof'], [18, 30, 3, 'roof']] },
+  'P0.3': { plats: [FLOOR] },
+  'P0.4': { scene: 'neon', seed: 64, plats: [G, [5.2, 7.2, 1, 'steel', false], [7.2, 9.4, 2, 'steel', false], [9.4, 24, 3, 'steel', false], [27.1, 45, 3, 'steel', false], [27.6, 29, 1.1, 'crate', false], [29.6, 33, 2.2, 'container']] },
+  'P0.5': { scene: 'alley', plats: [G] },
+  'R.2': { scene: 'neon', seed: 72, plats: [G, [6, 7.6, .95, 'crate', false], [8.4, 20.6, 1.9, 'steel', false]] },
+  'R.5': { scene: 'alley', plats: [G, [4.6, 6.4, 1, 'crate', false], [7, 9.6, 1.9, 'crate', false], [11.4, 14.4, 1.9, 'crate', false], [16.2, 18.6, 1.9, 'crate', false]] },
+  '7.6': { scene: 'dock', plats: [[-60, 22, 0, 'steel', false]] },
   '1.1': { track: 'x' },
   '1.6': { scene: 'roofs', seed: 12, plats: [[-6, 4.6, 2.6, 'roof'], [6.1, 10.1, 1.8, 'roof'], [12.1, 15.6, 2.2, 'roof'], [18.1, 26, 1.2, 'roof']] },
   '1.7': { scene: 'roofs', seed: 17, plats: [[-6, 5.6, -.75, 'roof'], [8.2, 9.6, -.2, 'steel', false], [12.6, 30, -.75, 'steel', false]] },
@@ -69,7 +78,7 @@ const layerMat = (map, mapB, ref) => new THREE.ShaderMaterial({
 const clipMat = (o, ref) => new THREE.MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: ref, stencilFunc: THREE.EqualStencilFunc, ...o });
 
 let panels = [], P = {}, rainMats = [], L, manifest = {}, pageNo = 0, frameId = '';
-let hero, thug, goon, w1, w2, w3, gage, chars = [], foes = [];
+let hero, thug, goon, w1, w2, w3, gage, tax1, tax2, cor1, cor2, brick, keeper, chars = [], foes = [], onDown = null;
 const imgCache = {};
 const put = m => { scene.add(m); pageObjs.push(m); return m; };
 
@@ -179,20 +188,21 @@ class Char {
   }
 }
 function spawn(c, p, lx, o = {}) { c.setPanel(p); c.x = p.x0 + lx; c.y = o.y || 0; c.vx = c.vy = 0; c.hop = null; c.gone = false; c.shown = o.shown !== false; c.grounded = true;
-  c.face = o.face || 1; c.state = 'idle'; c.st = 0; c.ai = false; c.free = true; c.ghost = false; c.relaxed = !!o.relaxed; c.knockTo = null; c.guard = null; c.spin = 0; c.snatch = c.hasCase = false;
+  c.face = o.face || 1; c.state = 'idle'; c.st = 0; c.ai = false; c.free = true; c.ghost = false; c.relaxed = !!o.relaxed; c.knockTo = null; c.guard = null; c.spin = 0; c.snatch = c.hasCase = false; c.heavy = false;
   if (o.hp) c.hp = o.hp; c.wx = c.x; c.wy = p.y0 + GROUND + c.y; if (c === hero) { c.safe = { x: c.x, y: c.y }; c.noRespawn = false; } }
 
 // ---------- input
 const keys = {}, pressed = {};
 const MAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', Space: 'jump', ArrowUp: 'jump', KeyW: 'jump', ArrowDown: 'down', KeyS: 'down',
-  KeyJ: 'punch', KeyX: 'punch', KeyK: 'punch', Enter: 'ok' };
+  KeyJ: 'punch', KeyX: 'punch', KeyK: 'block', KeyC: 'block', KeyL: 'dodge', KeyV: 'dodge', ShiftLeft: 'dodge', Enter: 'ok' };
+const QUIET = { left: 1, right: 1, down: 1, block: 1, dodge: 1 };   // keys that never turn a story page
 addEventListener('keydown', e => { if (e.code === 'KeyR') location.reload(); const k = MAP[e.code]; if (!k) return; e.preventDefault();
-  if (!keys[k]) { pressed[k] = true; if (k !== 'left' && k !== 'right' && k !== 'down') pressed.ok = true; } keys[k] = true; });
+  if (!keys[k]) { pressed[k] = true; if (!QUIET[k]) pressed.ok = true; } keys[k] = true; });
 addEventListener('keyup', e => { const k = MAP[e.code]; if (k) keys[k] = false; });
 $('gl').addEventListener('pointerdown', () => { pressed.ok = true; });
-for (const [id, k] of [['bL', 'left'], ['bR', 'right'], ['bJ', 'jump'], ['bP', 'punch'], ['bD', 'down']]) {
+for (const [id, k] of [['bL', 'left'], ['bR', 'right'], ['bJ', 'jump'], ['bP', 'punch'], ['bD', 'down'], ['bB', 'block'], ['bG', 'dodge']]) {
   const b = $(id);
-  b.addEventListener('pointerdown', e => { e.preventDefault(); keys[k] = true; pressed[k] = true; if (k !== 'left' && k !== 'right' && k !== 'down') pressed.ok = true; });
+  b.addEventListener('pointerdown', e => { e.preventDefault(); keys[k] = true; pressed[k] = true; if (!QUIET[k]) pressed.ok = true; });
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => { keys[k] = false; });
 }
 
@@ -205,14 +215,21 @@ function hud() { const h = $('hud'); h.style.display = hudOn ? 'block' : 'none';
   h.innerHTML = '<b>MILO</b>' + '&#9829;'.repeat(Math.max(0, hero.hp)) + '<i>' + '&#9829;'.repeat(5 - Math.max(0, hero.hp)) + '</i>'; }
 
 // The clock: starts when Milo takes the case and only runs while the player is playing.
-const clock = { on: false, t: 0, par: 480, tip: true, shown: '' }, SPM = clock.par / 36;   // real seconds of play per story minute
-function clockTime() { const m = 24 + clock.t / SPM, late = m >= 60; return (late ? '12:' : '11:') + String(Math.floor(late ? m - 60 : m)).padStart(2, '0') + (late ? ' AM' : ' PM'); }
+const clock = { on: false, t: 0, par: 480, mins: 36, base: 23 * 60 + 24, tip: true, shown: '' }, spm = () => clock.par / clock.mins;   // real seconds of play per story minute
+function setClock(mins, par, h, m) { Object.assign(clock, { on: true, t: 0, mins, par, base: h * 60 + m, tip: true }); }
+function stopClock() { clock.on = false; clock.t = 0; }
+// the money: every delivery pays into it
+const wallet = { cash: 0, log: [] };
+async function payout(label, amount, note) { wallet.cash += amount; wallet.log.push([label, amount]); const c = $('cash'); c.textContent = 'TONIGHT  $' + wallet.cash; c.style.display = 'block';
+  hint(`${label}:  ${amount > 0 ? '+$' + amount : '$0'}${note ? '  •  ' + note : ''}`); await wait(AUTO ? 1.2 : 2.8); hint(''); }
+const fastPay = (base, bonus) => { const early = clock.t <= clock.par; return [base + (early ? bonus : -Math.round(base / 4)), early ? 'early: bonus' : 'late: pay docked']; };
+function clockTime() { const m = Math.floor(clock.base + clock.t / spm()), h = Math.floor(m / 60) % 24; return (h % 12 || 12) + ':' + String(m % 60).padStart(2, '0') + (h >= 12 ? ' PM' : ' AM'); }
 function showClock() { const c = $('clock'); if (!clock.on && !clock.t) { if (clock.shown) { clock.shown = ''; c.style.display = 'none'; } return; }
-  const left = Math.ceil(36 - clock.t / SPM), s = clockTime() + '<small>' + (left > 0 ? left + ' min left' : 'LATE') + '</small>';
+  const left = Math.ceil(clock.mins - clock.t / spm()), s = clockTime() + '<small>' + (left > 0 ? left + ' min left' : 'LATE') + '</small>';
   if (s !== clock.shown) { clock.shown = s; c.innerHTML = s; c.style.display = 'block'; c.className = left <= 0 ? 'late' : left <= 5 ? 'near' : ''; } }
 function lose(sec, x = hero.wx, y = hero.wy + 4.6) { if (!clock.on) return; clock.t += sec; burst('-' + sec + ' SEC', x, y, .7, 1, 1.1); }
-function result() { const u = clock.t / clock.par, early = Math.floor(36 - clock.t / SPM);
-  const pay = (u <= 1 ? Math.round(300 - 200 * u) : Math.max(20, Math.round(100 - 240 * (u - 1)))) + (clock.tip && u <= 1 ? 50 : 0);
+function result() { const u = clock.t / clock.par, early = Math.floor(clock.mins - clock.t / spm());
+  const pay = result.pay = (u <= 1 ? Math.round(300 - 200 * u) : Math.max(20, Math.round(100 - 240 * (u - 1)))) + (clock.tip && u <= 1 ? 50 : 0);
   return u <= 1 ? `Delivered at ${clockTime()}, ${early} min to spare. Pay $${pay}${clock.tip ? ' (with tip)' : ' (no tip: the case was snatched)'}` : `Delivered LATE at ${clockTime()}. Pay docked to $${pay}`; }
 
 let xing = null, control = false, hudOn = false, time = 0, hitstop = 0, shake = 0, combo = 0, spot = null, fork = null;
@@ -243,13 +260,13 @@ function parseLine(s) { let m;
   return { t: m[2] === 'radio' ? 'radio' : m[2] === 'T' ? 'thought' : 'speech', who: m[1], text: m[3] }; }
 
 // A story frame: the camera settles on the illustration and the reader taps through its lettering.
-async function storyFrame(id, hold = .9) {
-  const p = P[id]; enterPanel(p, .8);
+async function storyFrame(id, hold = .9, v) {
+  const p = P[id], lines = v && p.def.variants && p.def.variants[v] ? p.def.variants[v].lines : p.def.lines; enterPanel(p, .8);
   if (p.def.track === 'x') { let u = 0; const a = poiOf(p), end = a ? (a[0] - p.x0) / p.w : .85, start = end > .5 ? .15 : .85;   // the pan ends on the subject
     focusOn.eye = () => { u = Math.min(1, u + .0022); const e = u * u * (3 - 2 * u); return [p.x0 + p.w * (start + (end - start) * e), a ? a[1] : p.cy]; }; }
   await wait(hold);
   let n = 0, cur = null, k = clamp(p.w / 12, .62, 1);
-  for (const s of p.def.lettered ? [] : p.def.lines) { const l = parseLine(s);
+  for (const s of p.def.lettered ? [] : lines) { const l = parseLine(s);
     if (l.t === 'cap') { caption(p, l.text); await wait(.8); continue; }
     if (l.t === 'sfx') { burst(l.text, p.cx + (n % 2 ? -1 : 1) * p.w * .1, p.cy + p.h * .1, clamp(p.w / 11, .55, 1.3), 2, 1.3); shake = .4; await wait(.9); continue; }
     if (cur) dropBalloon(cur);
@@ -257,7 +274,7 @@ async function storyFrame(id, hold = .9) {
     const fx = clamp(p.x0 + p.w * (n % 2 ? .66 : .34), p.x0 + rxW + .3, Math.max(p.x0 + rxW + .3, p.x1 - rxW - .3)), fy = p.y1 - ryW - .4;
     cur = { b, fx, fy, tx: fx + (p.cx - fx) * .4, ty: p.cy - p.h * .02, k }; balloons.push(cur); n++;
     await tap(); }
-  if (!n) await tap();
+  if (!n) { if (p.def.auto) await wait(p.def.auto); else await tap(); }
   if (cur) dropBalloon(cur);
 }
 
@@ -289,7 +306,8 @@ function heroHits(e) {
 function hurtHero(dir, word) {
   hero.hp--; hero.inv = .9; hero.vx = dir * 4.2; hitstop = .07; shake = .3;
   burst(word, hero.x, hero.wy + 2.7, .85, 1); hud();
-  if (hero.hp <= 0) { hero.set('down'); hero.vy = 6;
+  if (hero.hp <= 0 && onDown) { hero.set('down'); hero.vy = 6; const f = onDown; onDown = null; f(); }   // this time he stays down, and it costs him the package
+  else if (hero.hp <= 0) { hero.set('down'); hero.vy = 6;
     lose(10); wait(1.7).then(() => { hero.hp = 5; hero.inv = 1.6; if (hero.state === 'down') hero.set('idle'); hud(); if (hero.shown) shout(hero, 'Not today.', 1.3); }); }
   else { hero.set('hurt'); hero.st = 0; }
 }
@@ -304,6 +322,8 @@ function playHero() {
     const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
     hero.vx = dir * 4.4; if (dir) hero.face = dir;
     if (idle) hero.set(dir ? 'walk' : 'idle');
+    if (idle && hero.grounded && pressed.dodge && time > (hero.cool || 0)) { hero.set('dodge'); hero.inv = Math.max(hero.inv, .36); hero.vx = -hero.face * 9; hero.cool = time + .75; }   // a quick step back out of reach
+    else if (idle && hero.grounded && keys.block && !pressed.punch && !pressed.jump) { hero.set('block'); hero.vx = 0; }
     if (pressed.jump && idle && hero.grounded) { hero.vy = 10.5; hero.grounded = false; hero.set('jump'); }
     if (pressed.punch) { hero.set('punch'); hero.st = 0; hero.hitDone = false; if (hero.grounded) hero.vx = hero.face * 1.4; }
   } else if (!control && idle && !hero.free) hero.vx = 0;
@@ -313,6 +333,8 @@ function playHero() {
     if (hero.st > .34) hero.set(hero.grounded ? 'idle' : 'jump');
   }
   if (hero.state === 'hurt' && hero.st > .32) hero.set('idle');
+  if (hero.state === 'block') { hero.vx *= .8; if (!keys.block || !control) hero.set('idle'); }
+  if (hero.state === 'dodge') { hero.vx *= .93; if (hero.st > .26) hero.set('idle'); }
 }
 function playEnemy(e, dt) {
   if (!e.ai || e.hop) return;
@@ -328,14 +350,16 @@ function playEnemy(e, dt) {
       break;
     case 'wind': e.vx = 0; if (e.st > e.windT) { e.set('strike'); e.struck = false; } break;
     case 'strike':
-      if (!e.struck && e.st > .04 && hero.inv <= 0 && hero.state !== 'down' && inReach(e, hero)) { e.struck = true; hurtHero(e.face, e.snatch ? 'YOINK!' : 'THWACK!');
+      if (!e.struck && e.st > .04 && hero.state === 'dodge' && dist < e.reach + 2.6) { e.struck = true; burst('WHIFF!', e.x + e.face * 1.4, e.wy + 3.6, .8, 1, .8); e.set('hurt'); e.st = -.4; e.vx = e.face * 2; break; }   // he swings at air and is wide open
+      if (!e.struck && e.st > .04 && hero.inv <= 0 && hero.state === 'block' && hero.face === -e.face && !e.heavy && inReach(e, hero)) { e.struck = true; burst('BLOCK!', hero.x + hero.face * .9, hero.wy + 3.2, .75, 0, .7); hero.vx = e.face * 2.6; hitstop = .05; shake = .15; }
+      else if (!e.struck && e.st > .04 && hero.inv <= 0 && hero.state !== 'down' && inReach(e, hero)) { e.struck = true; hurtHero(e.face, e.snatch ? 'YOINK!' : hero.state === 'block' ? 'CRACK!' : 'THWACK!');
         if (e.snatch) { e.snatch = false; e.hasCase = true; e.ai = false; e.free = true; e.face = 1; e.vx = 3; e.set('walk'); hint('He has the case! Catch him and hit him!'); } }
       if (e.st > .3) { e.set('idle'); e.wait = .6 + Math.random() * .9; }
       break;
     case 'hurt': if (e.st > .32) { e.set('idle'); e.wait = .3 + Math.random() * .5; } break;
   }
 }
-function arm(e, o = {}) { Object.assign(e, { reach: 2.05, windT: .42, speed: 2.5 }, o); e.free = false; e.ai = true; e.relaxed = false; e.ghost = false; e.wait = o.wait || 1.1; if (!foes.includes(e)) foes.push(e); }
+function arm(e, o = {}) { Object.assign(e, { reach: 2.05, windT: .42, speed: 2.5, heavy: false }, o); e.free = false; e.ai = true; e.relaxed = false; e.ghost = false; e.wait = o.wait || 1.1; if (!foes.includes(e)) foes.push(e); }
 function startAction(text) { hudOn = true; hud(); control = true; hero.free = false; hero.relaxed = false; hint(text); }
 async function endAction() { control = false; hudOn = false; hud(); hint(''); hero.vx = 0; hero.relaxed = true; await until(() => hero.grounded && !hero.busy); hero.set('idle'); foes = []; }
 async function heroEnters(p, to = 2.4, y = 0) { spawn(hero, p, -1.4, { y, relaxed: true }); await walkTo(hero, p.x0 + to, 3.2); hero.face = 1; }
@@ -418,6 +442,135 @@ async function leapOff(p, vx = 5.5) { control = false; hint(''); hero.noRespawn 
 async function cutIn(id, back) { const h = $('hint').textContent; control = false; hero.vx = 0; if (hero.state === 'walk') hero.set('idle');
   await storyFrame(id, .4); enterPanel(back); control = true; hint(h); }
 
+// ---------- the opening: prologue, then tonight's earlier deliveries
+// lines spoken while the player keeps moving: [who, text, seconds, kind]
+async function chat(list) { for (const [c, text, sec = 1.7, kind = 'speech'] of list) { if (!c.shown) continue; shout(c, text, sec, kind); await wait(sec + .25); } }
+const dot = (text, sec = 1.9) => [hero, text, sec, 'radio'];
+async function press(text) { hint(text); pressed.punch = false; let t = 0; await until(dt => pressed.punch || (AUTO && (t += dt) > .6)); hint(''); }
+// A fight over a package that can end three ways. The story frame after it shows which.
+async function encounter(p, men, o = {}) {
+  let out = null; onDown = () => { out = 'robbed'; };
+  await until(() => out || (out = men.every(e => e.state === 'down') ? 'won' : !o.noExit && hero.grounded && hero.x > p.x1 - 1.3 ? 'fled' : null));
+  onDown = null; control = false; hint('');
+  if (out === 'robbed') {   // they take it and go; he gets up without it
+    burst('YOINK!', hero.x, hero.wy + 3.4, .9, 1, 1); await wait(.9);
+    for (const e of men) if (e.state !== 'down') { e.ai = false; e.free = true; e.ghost = true; walkTo(e, p.x1 + 2.5, 5).then(() => { e.shown = false; }); }
+    await wait(1.5); hero.hp = 5; hero.inv = 0; hero.set('idle'); hud(); }
+  return out;
+}
+
+async function prologue1() {
+  await storyFrame('P0.1');
+  // the route: move and jump
+  const a = P['P0.2'], b = P['P0.3'], c = P['P0.4']; enterPanel(a);
+  await heroEnters(a, 2.4, 2.2);
+  await say(hero, 'You at the pickup?', 'radio'); await say(hero, "I'm looking at it."); await say(hero, "That's not\nwhat I asked.", 'radio'); await say(hero, 'Then ask a\nbetter question.');
+  startAction('Arrow keys (or A and D) to run  •  Space to jump'); hudOn = false; hud();
+  await until(() => hero.x > a.x0 + 11.6 && hero.grounded);
+  chat([dot('Danny never needed\nthis long.'), [hero, "Danny isn't here.", 1.5], dot("No. He isn't.", 1.6)]);
+  await until(() => hero.x > a.x0 + 21.5 && hero.grounded && !hero.busy);
+  await endAction(); await walkTo(hero, a.x1 + 1.6, 3.6); hero.shown = false;
+  // the pickup
+  enterPanel(b); spawn(keeper, b, b.w - 3.6, { face: -1, relaxed: true }); await heroEnters(b, 2);
+  await say(keeper, "You're the new kid?"); await say(hero, "Depends who's asking."); await say(keeper, "You Danny's brother?"); await say(hero, 'Was.');
+  hero.free = false; control = true; hint('Walk to the counter');
+  await until(() => hero.x > keeper.x - 2.7); control = false; hero.vx = 0; hero.set('idle'); hero.face = 1;
+  await press('J or X: take the package'); burst('GOT IT', hero.x + 1.2, hero.wy + 3, .7, 1, .9);
+  await say(keeper, 'He was better at this.'); await say(hero, "I'm getting that a lot.");
+  hero.free = true; await walkTo(hero, b.x0 - 1.6, 3.6); hero.shown = false; keeper.shown = false;
+  // the clock
+  enterPanel(c); await heroEnters(c, 2.2);
+  await say(hero, 'You have eight minutes.', 'radio'); await say(hero, 'For three blocks?'); await say(hero, 'Then this should\nbe easy.', 'radio');
+  setClock(8, 26, 18, 12);
+  startAction('Beat the clock for a bonus  •  the jump up top is quicker, if you make it'); hudOn = false; hud();
+  chat([[hero, 'You ever consider\nbeing encouraging?', 1.8], dot('No.', 1.1)]);
+  await until(() => hero.x > c.x1 - 1.6 && hero.grounded && !hero.busy);
+  await endAction(); await walkTo(hero, c.x1 + 1.6, 4); hero.shown = false;
+}
+
+async function prologue2() {
+  const a = P['P0.5']; enterPanel(a);
+  if (!clock.on) setClock(8, 26, 18, 12);
+  spawn(tax1, a, a.w - 6.5, { face: -1, relaxed: true, hp: 9 }); spawn(tax2, a, a.w - 4.2, { face: -1, relaxed: true, hp: 9 });
+  await heroEnters(a, 4.5);
+  await say(tax1, 'Package tax.'); await say(hero, "There's no\npackage tax."); await say(tax2, 'There is now.');
+  tax1.guard = tax2.guard = () => true;   // try as he might
+  arm(tax1, { speed: 3, wait: .5, windT: .34 }); arm(tax2, { speed: 2.6, wait: 1.1, windT: .38 });
+  startAction('J punch  •  K block  •  L dodge'); hero.hp = 3; hud();
+  await Promise.race([encounter(a, [tax1, tax2], { noExit: true }), wait(11).then(() => { if (onDown) { onDown = null; hero.inv = 0; hero.hp = 1; hurtHero(-1, 'SHOVE!'); hero.set('down'); control = false; hint(''); burst('YOINK!', hero.x, hero.wy + 3.4, .9, 1, 1);
+    for (const e of [tax1, tax2]) { e.ai = false; e.free = true; e.ghost = true; walkTo(e, a.x1 + 2.5, 5).then(() => { e.shown = false; }); } } })]);
+  await until(() => !tax1.shown && !tax2.shown); foes = [];
+  hero.hp = 5; hero.inv = 0; hero.set('idle'); hero.face = 1; hudOn = false; hud(); hero.relaxed = true;
+  await say(hero, 'Hey! Come back!'); clock.on = false;
+  await say(hero, 'Milo? Status?', 'radio'); await say(hero, 'Package is gone.'); await say(hero, 'You lose it?', 'radio');
+  await say(hero, "No, Dot. I gave it away.\nThought I'd be generous."); await say(hero, "I'll mark it lost.", 'radio'); await say(hero, "That's it?"); await say(hero, "That's the job.", 'radio');
+  stopClock(); await payout('First delivery: LOST', 0, 'a lost package costs the pay, never the game');
+  hero.shown = false;
+  for (const id of ['P0.6', 'P0.7a', 'P0.7b', 'P0.7c', 'P0.7d']) await storyFrame(id, id === 'P0.6' ? 1.6 : .7);
+  wallet.cash = 0; $('cash').style.display = 'none';   // a year on: tonight's money starts from nothing
+}
+
+async function route() {
+  await storyFrame('R.1');
+  // the toll: fight, or go over the top
+  const a = P['R.2']; enterPanel(a);
+  spawn(cor1, a, 12.5, { face: -1, relaxed: true, hp: 3 }); spawn(cor2, a, 15.6, { face: -1, relaxed: true, hp: 3 });
+  await heroEnters(a, 2.6);
+  await say(cor1, 'Toll road,\ndelivery boy.'); await say(hero, "It's cough syrup."); await say(cor2, "Then it's a\ncheap toll.");
+  setClock(12, 34, 21, 40);
+  arm(cor1, { speed: 2.6, wait: .8 }); arm(cor2, { speed: 2.2, wait: 1.6 });
+  startAction('Your call: fight them (J  K  L), or up the crate and over the scaffolding');
+  const one = await encounter(a, [cor1, cor2]);
+  await endAction(); clock.on = false;
+  if (one === 'fled') { hero.free = true; await walkTo(hero, a.x1 + 1.6, 4.6); }
+  hero.shown = false; cor1.shown = cor2.shown = false;
+  await storyFrame('R.3', .9, one);
+  { const [pay, note] = fastPay(40, 15);
+    if (one === 'robbed') await payout('Prescription: LOST', 0, 'no package, no pay');
+    else await payout('Prescription: DELIVERED', pay, (one === 'won' ? 'fought through' : 'got away clean') + ', ' + note); }
+  stopClock();
+  // the Anchor: the one he cannot win
+  await storyFrame('R.4');
+  const b = P['R.5']; enterPanel(b);
+  spawn(brick, b, 13, { face: -1, relaxed: true, hp: 9 }); spawn(tax1, b, 17, { face: -1, relaxed: true, hp: 9 }); spawn(tax2, b, 19.6, { face: -1, relaxed: true, hp: 9 });
+  await heroEnters(b, 2.4);
+  await say(brick, "Dot's boy.\nYou're light."); await say(hero, "I haven't opened it."); await say(brick, "Didn't say you did.");
+  brick.guard = tax1.guard = tax2.guard = () => true;
+  setClock(10, 30, 22, 25);
+  arm(brick, { reach: 2.6, windT: .5, speed: 2.1, heavy: true, wait: .9 }); arm(tax1, { speed: 2.4, wait: 1.8 }); arm(tax2, { speed: 2.2, wait: 2.6 });
+  startAction("You can't beat him  •  over the crates to the back door  ▶");
+  const two = await encounter(b, [brick, tax1, tax2]);
+  await endAction(); clock.on = false;
+  if (two === 'fled') { hero.free = true; await walkTo(hero, b.x1 + 1.6, 4.6); }
+  hero.shown = false; brick.shown = tax1.shown = tax2.shown = false;
+  await storyFrame('R.6', .9, two === 'robbed' ? 'robbed' : 'fled');
+  { const [pay, note] = fastPay(60, 20);
+    if (two === 'robbed') await payout('Envelope: TAKEN', 0, 'no envelope, no pay');
+    else await payout('Envelope: DELIVERED', pay, note); }
+  stopClock();
+}
+
+// the last frame: run the pier and time the jump for the trailing line
+async function lastJump() {
+  const p = P['7.6']; enterPanel(p, .9);
+  spawn(hero, p, 2.2, { relaxed: true }); await wait(.5);
+  await say(hero, "You'll never make it!", 'speech'); await say(hero, 'Milo? What are\nyou doing?', 'radio'); await say(hero, 'Something stupid.');
+  shout(hero, "Milo, don't...", 1.4, 'radio');
+  const edge = p.x0 + 22, line = p.x0 + 31;
+  for (;;) {
+    hero.free = false; hero.relaxed = false; control = true; hero.noRespawn = true; hint('RUN!  Space to jump at the very end of the pier');
+    let got = false; hero.gone = false; hero.shown = true;
+    await until(() => { if (pressed.jump && hero.grounded && hero.x > edge - 2.6) got = true; return got || hero.gone || hero.y < -2; });
+    control = false; hint('');
+    if (got) { hero.free = true; await hop(hero, p, line, { y: 2.2, h: 3.4, dur: 1.05 }); break; }
+    burst('SPLASH!', hero.x, p.y0 + GROUND + .6, 1, 2, 1.1); await wait(1.2);   // too early or not at all: hauled out to try again
+    spawn(hero, p, 2.2, { relaxed: true });
+  }
+  hero.set('jump'); hero.vx = hero.vy = 0; hero.y = 2.2; hero.grounded = true; p.plats.push({ x0: line - 1, x1: line + 1, top: 2.2, look: null, solid: false });
+  burst('GOT IT!', line, hero.wy + 4.4, 1, 2, 1.2); await wait(1.2);
+  await say(hero, "Danny's alive.", 'thought'); await say(hero, "This wasn't on\nthe route sheet.", 'thought');
+}
+
 async function page1() {
   for (const id of ['1.1', '1.2', '1.3', '1.4', '1.5']) await storyFrame(id);
   const p = P['1.6'], q = P['1.7']; enterPanel(p);
@@ -446,13 +599,13 @@ async function page2() {
   await endAction(); hero.shown = false; await wait(.4);
   // the pickup
   enterPanel(c); spawn(w1, c, c.w - 4.2, { face: -1, relaxed: true }); await heroEnters(c, 2.2);
-  await say(w1, "You're the courier?\nTake it. Quickly.");
+  await say(w1, "You're the courier?"); await say(hero, "That's what the slip says."); await say(w1, 'Take it. Quickly.');
   hero.free = false; control = true; hint('Walk to the desk');
   await until(() => hero.x > w1.x - 2.7); control = false; hero.vx = 0; hero.set('idle'); hero.face = 1;
   hint('J or X: take the case'); pressed.punch = false; { let t = 0; await until(dt => pressed.punch || (AUTO && (t += dt) > .6)); } hint('');
   burst('CLICK', hero.x + 1.2, hero.wy + 3, .7, 1, .9);
   await say(w1, 'Only to her. Nobody else.\nGet it signed.'); await say(hero, "That's the job.");
-  clock.on = true; radio("Thirty-six minutes, kid.\nClock's running.", 2.6); await wait(2.4);
+  setClock(36, 480, 23, 24); radio("Thirty-six minutes, kid.\nClock's running.", 2.6); await wait(2.4);
   await walkTo(hero, c.x0 - 1.6, 3.6); hero.shown = false;
   for (const id of ['2.5', '2.6', '2.7', '2.8']) await storyFrame(id);
 }
@@ -482,29 +635,29 @@ async function page4() {
   const a = P['4.1'], b = P['4.3'], c = P['4.4'], d = P['4.5'];
   enterPanel(a);
   spawn(hero, a, -1.4, { relaxed: true }); spawn(thug, a, a.w + 1.4, { face: -1, shown: false, relaxed: true, hp: 4 });
-  await wait(1.2); caption(a, 'The docks. 11:42 PM.');
+  await wait(1.2); caption(a, 'Pier 27. 11:42 PM.');
   await walkTo(hero, a.x0 + 3.4, 2.6);
-  await say(hero, 'Pier 27.\nAlmost there...', 'thought');
+  await say(hero, 'Almost there.', 'thought');
   hero.free = false; control = true; hint('Arrow keys to walk');
   await until(() => hero.x > a.x0 + 5.4);
   control = false; hint(''); hero.vx = 0; hero.set('idle'); hero.face = 1;
   thug.shown = true; await walkTo(thug, a.x1 - 2.7, 2.4); thug.face = -1;
   await say(thug, 'End of the line, kid.\nHand over the case.');
   await say(hero, 'Sorry. It needs\na signature.');
-  await say(thug, 'Why do they always\ntalk back...', 'thought');
+  await say(thug, 'Funny.'); await say(hero, 'I get that a lot.');
   await storyFrame('4.2', .6);
   hero.shown = thug.shown = false;
   // round one
-  enterPanel(b); caption(b, 'Pier 27. No witnesses.');
+  enterPanel(b);
   spawn(thug, b, 11.5, { face: -1, hp: 4 }); thug.knockTo = { p: c, dir: 0, word: 'KRASH!' };
   await heroEnters(b, 2.4); await wait(.3);
-  arm(thug); startAction('J or X to punch  •  Space to jump');
+  arm(thug); startAction('J punch  •  K block  •  L dodge  •  Space jump');
   await until(() => thug.flown && !thug.hop); thug.flown = false;
   await diveAfter(c, clamp(thug.x - 4.5, c.x0 + 5, c.x1 - 3), 'Space: jump down after him');
   // round two
   thug.set('idle'); thug.hp = 2; arm(thug, { wait: .9 }); startAction('');
   spawn(goon, c, -1.4, { hp: 4 }); goon.ghost = true; goon.guard = () => thug.state !== 'down'; goon.knockTo = { p: d, dir: -1, fx: d.cx, y: d.h * .3, hide: true };   // Slim comes in behind Milo
-  wait(2).then(async () => { await walkTo(goon, c.x0 + 2.3, 3); shout(goon, "Hey! That's\nmy brother!", 1.7); arm(goon, { wait: 1.2 }); });
+  wait(2).then(async () => { await walkTo(goon, c.x0 + 2.3, 3); shout(goon, "Hey! That's\nmy brother!", 1.7); arm(goon, { wait: 1.2 }); wait(1.8).then(() => shout(hero, 'I gathered that.', 1.3)); });
   await until(() => goon.flown && !goon.hop);
   await endAction();
   await storyFrame('4.5', .1);
@@ -522,9 +675,9 @@ async function page5a() {
   spawn(w1, a, a.w - 3.4, { face: -1, hp: 3 }); spawn(w2, a, -1.4, { hp: 3, shown: false });
   w2.guard = () => w1.state !== 'down'; w2.knockTo = { p: b, dir: -1, word: 'THUD!' };
   await heroEnters(a, 4.6);
-  shout(w1, "Yard's closed,\ncourier.", 1.8); await wait(1.3);
-  arm(w1, { reach: 2.7, windT: .55, speed: 2.2 }); wait(2.2).then(async () => { w2.shown = true; w2.ghost = true; await walkTo(w2, a.x0 + 1.6, 3); arm(w2, { reach: 2.7, windT: .55, speed: 2.0 }); });   // the second one boxes him in from behind
-  startAction('Pipes reach further: step back, then hit');
+  await say(w1, "Yard's closed,\ncourier."); await say(hero, "I'm looking for someone."); shout(w1, 'Everybody is.', 1.5); await wait(.9);
+  arm(w1, { reach: 2.7, windT: .55, speed: 2.2, heavy: true }); wait(2.2).then(async () => { w2.shown = true; w2.ghost = true; await walkTo(w2, a.x0 + 1.6, 3); arm(w2, { reach: 2.7, windT: .55, speed: 2.0, heavy: true }); });   // the second one boxes him in from behind
+  startAction('Pipes go through a block: dodge (L), then hit');
   await until(() => w2.flown && !w2.hop);
   await diveAfter(b, b.x0 + 8, 'Space: jump down after him');
   // the forklift
@@ -549,7 +702,7 @@ async function page5b() {   // over the top, then the searchlight
   await endAction(); enterPanel(d); await hop(hero, d, d.x0 + 1.6, { y: 1.4, h: 2, dur: .6 }); hero.face = 1;
   addSpot(d, 1.9, t => [6.8 + 4.6 * Math.sin(t * .9), GROUND + 4.9]);
   startAction('Go between sweeps of the light');
-  wait(.6).then(() => shout(hero, 'Wait for it...', 1.6, 'thought'));
+  wait(.6).then(() => shout(hero, 'Wait for it...', 1.6, 'thought')); wait(3).then(() => shout(hero, 'Now!', 1, 'thought'));
   await until(() => hero.x > d.x1 - 2.1 && hero.grounded && !hero.busy);
   await leapOff(d);
 }
@@ -576,9 +729,9 @@ async function page6() {
   const b = P['6.5'], c = P['6.6']; enterPanel(b);
   spawn(gage, b, b.w - 6, { face: -1, hp: 6 }); gage.knockTo = { p: c, pit: true, word: 'KLANG!', h: .2 };
   await heroEnters(b, 2.6);
-  shout(gage, "The last courier didn't\nlisten either.", 2); await wait(1.4);
-  arm(gage, { reach: 3.4, windT: .7, speed: 2.0, leaps: true });
-  startAction('The hook is slow: dodge it, then hit  •  mind the gap');
+  await say(gage, "The last courier didn't\nlisten either."); shout(hero, 'What last courier?', 1.4); await wait(.5);
+  arm(gage, { reach: 3.4, windT: .7, speed: 2.0, leaps: true, heavy: true });
+  startAction('No blocking the hook: dodge it (L), then hit  •  mind the gap');
   await until(() => { if (gage.knockTo && !gage.hop && gage.y < -1) { gage.knockTo.x = clamp(gage.x, c.x0 + 2, c.x1 - 2); knock(gage); }   // down through the gap and into the frame below
     return gage.flown && !gage.hop; }); gage.flown = false; gage.leaps = false;
   await diveAfter(c, clamp(gage.x - 4.5, c.x0 + 2, c.x1 - 3), 'Space: jump down after him');
@@ -594,19 +747,22 @@ async function page7() {
   const a = P['7.1']; enterPanel(a); caption(a, '11:58 PM.');
   await heroEnters(a, 2);
   startAction('RUN!  Jump the ropes'); hudOn = false; hud();
+  radio('Ninety seconds.', 1.3); wait(1.5).then(() => shout(hero, 'I know!', 1)); wait(2.8).then(() => radio("Don't miss the deadline.", 1.6)); wait(4.6).then(() => shout(hero, "I'm trying not to die!", 1.5));
   await until(() => hero.x > a.x1 - 2.4 && hero.grounded && !hero.busy);
-  await endAction(); clock.on = false;
-  for (const id of ['7.2', '7.3', '7.4', '7.5', '7.6']) await storyFrame(id);
+  await endAction(); clock.on = false; hero.shown = false;
+  for (const id of ['7.2', '7.3', '7.4', '7.5']) await storyFrame(id);
+  await lastJump();
   enterPanel(P['7.7'], .5); await wait(1.8);
   await storyFrame('7.8', 1.2);
   focusPanel(null); frameId = 'end'; for (const q of panels) q.want = 1;
-  hint(`${result()}  •  End of ${LEVEL.series} #${LEVEL.issue}. To be continued...  Press R to read it again`);
+  const text = result(); wallet.cash += result.pay; $('cash').textContent = 'TONIGHT  $' + wallet.cash; $('cash').style.display = 'block';
+  hint(`${text}  •  Night's take $${wallet.cash}  •  End of ${LEVEL.series} #${LEVEL.issue}. To be continued...  Press R to read it again`);
 }
-const PAGES = [page1, page2, page3, page4, page5, page6, page7];
+const PAGES = [prologue1, prologue2, route, page1, page2, page3, page4, page5, page6, page7];
 
 async function turnPage(n) {
   const pg = LEVEL.pages[n], w = $('wipe');
-  $('wipeT').innerHTML = `Page ${n + 1}<small>${pg.title}  -  ${pg.time}</small>`;
+  $('wipeT').innerHTML = `${pg.label || 'Page ' + (n + 1 - OPEN)}<small>${pg.title}  -  ${pg.time}</small>`;
   w.style.transition = ''; w.offsetWidth; w.style.transform = 'translateX(0)';
   await wait(.6); clearPage(); await buildPage(n);
   Object.assign(view, { cx: PAGE.w / 2, cy: PAGE.h / 2, D: 80 });
@@ -614,8 +770,10 @@ async function turnPage(n) {
   wait(.6).then(() => { w.style.transition = 'none'; w.style.transform = 'translateX(105%)'; });
 }
 async function run(start) {
-  if (start >= 2) { clock.on = true; clock.t = [0, 0, 9, 18, 25, 31, 34][start] * SPM; }
-  for (let n = start; n < PAGES.length; n++) { if (n > start) await turnPage(n); await PAGES[n](); await wait(.6); }
+  if (start >= OPEN + 2) { setClock(36, 480, 23, 24); clock.t = [0, 0, 9, 18, 25, 31, 34][start - OPEN] * spm(); }
+  for (let n = start; n < PAGES.length; n++) { if (n > start) await turnPage(n);
+    if (clock.on && n - OPEN >= 2) clock.t = Math.max(clock.t, [0, 0, 9, 18, 25, 31, 34][n - OPEN] * spm());   // the clock never reads earlier than the story says it is
+    await PAGES[n](); await wait(.6); }
 }
 
 // ---------- every frame
@@ -695,7 +853,8 @@ async function boot() {
   paper.position.set(PAGE.w / 2, PAGE.h / 2, 0); paper.renderOrder = 0; scene.add(paper);
   L = new Lettering($('ink'));
   hero = new Char('hero'); thug = new Char('thug'); goon = new Char('goon'); w1 = new Char('worker'); w2 = new Char('worker'); w3 = new Char('worker'); gage = new Char('gage');
-  chars = [hero, thug, goon, w1, w2, w3, gage]; hero.hp = 5;
+  tax1 = new Char('tax1'); tax2 = new Char('tax2'); cor1 = new Char('corner1'); cor2 = new Char('corner2'); brick = new Char('brick'); keeper = new Char('keeper');
+  chars = [hero, thug, goon, w1, w2, w3, gage, tax1, tax2, cor1, cor2, brick, keeper]; hero.hp = 5;
   const sheets = {};
   for (const c of chars) { const cfg = (manifest.sprites || {})[c.kind]; if (!cfg) continue;
     if (!sheets[c.kind]) { const s = sheets[c.kind] = {}; const img = await loadImage('./art/' + cfg.file);
@@ -703,14 +862,15 @@ async function boot() {
       if (cfg.walk && s.sprites) { const im2 = await loadImage('./art/' + cfg.walk.file);
         if (im2) { try { Object.assign(s.sprites, sliceSprites(im2, cfg.walk)); s.cycle = cfg.walk.cycle; } catch (e) { console.error(e); } } } }
     if (sheets[c.kind].sprites) { c.pup.sprites = sheets[c.kind].sprites; if (sheets[c.kind].cycle) c.pup.cycle = sheets[c.kind].cycle; } }
-  const start = clamp((parseInt(QS.get('page')) || 1) - 1, 0, PAGES.length - 1);
+  const want = QS.get('page'), key = LEVEL.pages.findIndex(q => q.key === want);   // ?page=P1, P2, R or the page number 1 to 7
+  const start = key >= 0 ? key : want ? clamp(OPEN + (parseInt(want) || 1) - 1, 0, PAGES.length - 1) : 0;
   await buildPage(start);
   let last = performance.now();
   const loop = now => { frame((now - last) / 1000); last = now; requestAnimationFrame(loop); };
   requestAnimationFrame(loop);
   window.__game = { hero, chars, view, keys, pressed, focusPanel, get P() { return P; }, get panels() { return panels; }, get foes() { return foes; },
     get xing() { return xing; }, clock,
-    get at() { return { page: pageNo + 1, frame: frameId, control, hp: hero.hp, x: +(hero.x - (hero.panel ? hero.panel.x0 : 0)).toFixed(2), y: +hero.y.toFixed(2), state: hero.state }; } };
+    wallet, get at() { return { page: pageNo + 1, frame: frameId, control, hp: hero.hp, x: +(hero.x - (hero.panel ? hero.panel.x0 : 0)).toFixed(2), y: +hero.y.toFixed(2), state: hero.state }; } };
   await wait(1.2);
   run(start).catch(e => console.error(e));
 }
