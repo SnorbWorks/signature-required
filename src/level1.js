@@ -1,4 +1,4 @@
-// LEVEL 1 MAP: every page, every frame. The storyboard page shows this, the art
+// SIGNATURE REQUIRED, issue #1 "Last Run of the Night". LEVEL MAP: every page, every frame. The storyboard page shows this, the art
 // list is derived from it, and the game will be built from it.
 //   r      = [left, bottom, right, top] on a 42 x 27 page
 //   kind   = 'story'  a composed comic illustration; the reader taps through its balloons
@@ -11,10 +11,11 @@
 //            (story frames tease with their own artwork)
 //   exit   = how the frame hands over to the next one
 export const LEVEL = {
-  title: 'Signature Required',
+  series: 'Signature Required', issue: 1,
+  title: 'Last Run of the Night',
   pages: [
     {
-      title: 'Last Run of the Night', time: '11:31 PM',
+      title: 'The Call', time: '11:31 PM',
       panels: [
         { id: '1.1', r: [1.2, 20.4, 40.8, 25.8], kind: 'story', name: 'The city',
           shot: 'Extreme wide establishing shot. Rain-soaked skyline filling a long thin strip; Milo is a tiny yellow figure sitting on a rooftop ledge at the right, legs dangling, bike leaning beside him.',

@@ -448,7 +448,7 @@ async function page5() {
   enterPanel(P['5.5'], .5); await wait(1.8);
   await storyFrame('5.6', 1.2);
   focusPanel(null); frameId = 'end'; for (const q of panels) q.want = 1;
-  hint('To be continued...  Press R to read it again');
+  hint(`End of ${LEVEL.series} #${LEVEL.issue}, "${LEVEL.title}".  To be continued...  Press R to read it again`);
 }
 const PAGES = [page1, page2, page3, page4, page5];
 
