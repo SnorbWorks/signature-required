@@ -1,210 +1,308 @@
 {
-  "panels": {
-    "1.6": {
-      "teaser": "t1_6.png"
-    },
-    "4.1": {
-      "far": "p1_far.png",
-      "near": "p1_near.png",
-      "teaser": "t2_1.png"
-    },
-    "4.3": {
-      "far": "p2_far.png",
-      "near": "p2_near.png"
-    },
-    "4.4": {
-      "far": "p2_far.png",
-      "near": "p2_near.png"
-    },
-    "1.1": {
-      "story": "sr_1_1.png",
-      "poi": [
-        0.93,
-        0.4
-      ]
-    },
-    "1.2": {
-      "story": "sr_1_2.png",
-      "poi": [
-        0.45,
-        0.4
-      ]
-    },
-    "1.3": {
-      "story": "sr_1_3.png",
-      "poi": [
-        0.6,
-        0.45
-      ]
-    },
-    "1.4": {
-      "story": "sr_1_4.png",
-      "poi": [
-        0.45,
-        0.5
-      ]
-    },
-    "1.5": {
-      "story": "sr_1_5.png",
-      "poi": [
-        0.5,
-        0.6
-      ]
-    },
-    "2.2": {
-      "story": "sr_2_2.png",
-      "poi": [
-        0.45,
-        0.8
-      ]
-    },
-    "2.5": {
-      "story": "sr_2_5.png",
-      "poi": [
-        0.5,
-        0.5
-      ]
-    },
-    "2.6": {
-      "story": "sr_2_6.png",
-      "poi": [
-        0.55,
-        0.75
-      ]
-    },
-    "2.7": {
-      "story": "sr_2_7.png",
-      "poi": [
-        0.65,
-        0.45
-      ]
-    },
-    "2.8": {
-      "story": "sr_2_8.png",
-      "poi": [
-        0.52,
-        0.45
-      ]
-    },
-    "3.1": {
-      "story": "sr_3_1.png",
-      "poi": [
-        0.5,
-        0.55
-      ]
-    },
-    "3.3": {
-      "story": "sr_3_3.png",
-      "poi": [
-        0.55,
-        0.35
-      ]
-    },
-    "3.5": {
-      "story": "sr_3_5.png",
-      "poi": [
-        0.55,
-        0.3
-      ]
-    }
+ "panels": {
+  "1.6": {
+   "teaser": "t1_6.png"
   },
-  "sprites": {
-    "hero": {
-      "file": "hero.png",
-      "height": 262,
-      "frames": [
-        "idle",
-        "stance",
-        "walkA",
-        "walkB",
-        "punch",
-        "hurt",
-        "down",
-        "jump"
-      ],
-      "walk": {
-        "file": "hero_run.png",
-        "height": 250,
-        "anchor": "head",
-        "frames": [
-          "r0",
-          "r1",
-          "r2",
-          "r3",
-          "rx",
-          "r5",
-          "r6",
-          "r7"
-        ],
-        "cycle": [
-          "r2",
-          "r1",
-          "r6",
-          "r7"
-        ]
-      }
-    },
-    "thug": {
-      "file": "thug.png",
-      "height": 288,
-      "frames": [
-        "idle",
-        "stance",
-        "walkA",
-        "walkB",
-        "punch",
-        "hurt",
-        "down",
-        "wind"
-      ],
-      "walk": {
-        "file": "thug_walk.png",
-        "height": 276,
-        "anchor": "head",
-        "frames": [
-          "w0",
-          "w1",
-          "w2",
-          "w3"
-        ],
-        "cycle": [
-          "w0",
-          "w1",
-          "w2",
-          "w3"
-        ]
-      }
-    },
-    "goon": {
-      "file": "goon.png",
-      "height": 276,
-      "frames": [
-        "idle",
-        "stance",
-        "walkA",
-        "walkB",
-        "punch",
-        "hurt",
-        "down",
-        "wind"
-      ],
-      "walk": {
-        "file": "goon_walk.png",
-        "height": 250,
-        "anchor": "head",
-        "frames": [
-          "w0",
-          "w1",
-          "w2",
-          "w3"
-        ],
-        "cycle": [
-          "w0",
-          "w1",
-          "w2",
-          "w3"
-        ]
-      }
-    }
+  "4.1": {
+   "far": "p1_far.png",
+   "near": "p1_near.png",
+   "teaser": "t2_1.png"
+  },
+  "4.3": {
+   "far": "p2_far.png",
+   "near": "p2_near.png"
+  },
+  "4.4": {
+   "far": "p2_far.png",
+   "near": "p2_near.png"
+  },
+  "1.1": {
+   "story": "sr_1_1.png",
+   "poi": [
+    0.88,
+    0.5
+   ]
+  },
+  "1.2": {
+   "story": "sr_1_2.png",
+   "poi": [
+    0.45,
+    0.4
+   ]
+  },
+  "1.3": {
+   "story": "sr_1_3.png",
+   "poi": [
+    0.6,
+    0.45
+   ]
+  },
+  "1.4": {
+   "story": "sr_1_4.png",
+   "poi": [
+    0.45,
+    0.5
+   ]
+  },
+  "1.5": {
+   "story": "sr_1_5.png",
+   "poi": [
+    0.5,
+    0.6
+   ]
+  },
+  "2.2": {
+   "story": "sr_2_2.png",
+   "poi": [
+    0.45,
+    0.8
+   ]
+  },
+  "2.5": {
+   "story": "sr_2_5.png",
+   "poi": [
+    0.5,
+    0.5
+   ]
+  },
+  "2.6": {
+   "story": "sr_2_6.png",
+   "poi": [
+    0.55,
+    0.75
+   ]
+  },
+  "2.7": {
+   "story": "sr_2_7.png",
+   "poi": [
+    0.65,
+    0.45
+   ]
+  },
+  "2.8": {
+   "story": "sr_2_8.png",
+   "poi": [
+    0.52,
+    0.45
+   ]
+  },
+  "3.1": {
+   "story": "sr_3_1.png",
+   "poi": [
+    0.5,
+    0.5
+   ]
+  },
+  "3.3": {
+   "story": "sr_3_3.png",
+   "poi": [
+    0.62,
+    0.4
+   ]
+  },
+  "3.5": {
+   "story": "sr_3_5.png",
+   "poi": [
+    0.55,
+    0.3
+   ]
   }
+ },
+ "sprites": {
+  "hero": {
+   "file": "hero.png",
+   "height": 262,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "jump"
+   ],
+   "walk": {
+    "file": "hero_run.png",
+    "height": 250,
+    "anchor": "head",
+    "frames": [
+     "r0",
+     "r1",
+     "r2",
+     "r3",
+     "rx",
+     "r5",
+     "r6",
+     "r7"
+    ],
+    "cycle": [
+     "r2",
+     "r1",
+     "r6",
+     "r7"
+    ]
+   }
+  },
+  "thug": {
+   "file": "thug.png",
+   "height": 288,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "wind"
+   ],
+   "walk": {
+    "file": "thug_walk.png",
+    "height": 276,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
+  },
+  "goon": {
+   "file": "goon.png",
+   "height": 276,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "wind"
+   ],
+   "walk": {
+    "file": "goon_walk.png",
+    "height": 250,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
+  },
+  "tax1": {
+   "file": "tax1.png",
+   "height": 266,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "wind"
+   ]
+  },
+  "tax2": {
+   "file": "tax2.png",
+   "height": 286,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "wind"
+   ]
+  },
+  "corner1": {
+   "file": "corner1.png",
+   "height": 262,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "wind"
+   ]
+  },
+  "corner2": {
+   "file": "corner2.png",
+   "height": 286,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "wind"
+   ]
+  },
+  "brick": {
+   "file": "brick.png",
+   "height": 322,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "wind"
+   ]
+  },
+  "keeper": {
+   "file": "keeper.png",
+   "height": 258,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "wind"
+   ]
+  },
+  "gage": {
+   "file": "gage.png",
+   "height": 304,
+   "frames": [
+    "idle",
+    "stance",
+    "walkA",
+    "walkB",
+    "punch",
+    "hurt",
+    "down",
+    "wind"
+   ]
+  }
+ }
 }
