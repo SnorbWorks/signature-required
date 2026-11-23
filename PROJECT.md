@@ -101,6 +101,8 @@ How a `near` is made:
 4. The model still drifts: it moves props and draws doors a different size. So measure the finished picture and make the game fit it: set the platform positions in `GAME` in `src/main.js` from the picture, and in `art/manifest.json` set `zoom` (picture size; pick it so a door is about 4.3 units), `lift` (raise or lower the picture so feet meet the ground), and where needed `over` (parts drawn in front of the characters, like a counter), `erase` (parts left out), `patch` (copy clean paint over the tool's corner mark) and `indoor` (no rain).
 5. Check in the game with `?page=...&plats=1`, which shows the platforms faintly over the picture.
 
+More manifest settings added 2026-11-23: `props` on a background copies something already in the picture to another spot (used for the extra crates and dumpster in P0.4; the matching platforms are in `GAME`). On story frame 2.6, `clean` plus `cover` paints over the three drawn men with a piece of wall from beside them, so the game can walk three dark figures from the van to the door. Frame 2.7's window is kept dark by an overlay until the POP flashes.
+
 A request to edit a finished picture ("make the door taller, cut a gap here") works about half the time and costs an image.
 
 ## What is done
@@ -128,6 +130,7 @@ Suggested order: story frames first (they change the feel most), then freeze-fra
 
 - The two "Earlier tonight" deliveries and their dialog were written by the assistant and have not been reviewed.
 - Fight difficulty and the clock's time allowances are untuned.
+- Walk cycles are still missing for the package-tax thugs, the corner thugs and the doorman (they slide on one pose). Each needs one image.
 - The clock frame (P0.4) was simplified to fit its picture: steps, a loading platform and a truck bay, no jump that saves time.
 - The rooftop stairwell hut was left out of P0.2 because its door came out too small.
 - Doors in the new backgrounds run a little tall (about 1.3 times Milo's height).
