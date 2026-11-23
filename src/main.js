@@ -31,13 +31,15 @@ const GAME = {
   'P0.2': { scene: 'roofs', seed: 61, plats: [[-6, 7.9, 2.2, 'roof'], [9, 15.57, 2.2, 'roof'], [16.95, 30, 2.2, 'roof']] },
   'P0.3': { plats: [FLOOR] },
   // measured from the painted loading platform (art/bg_P0_4.png): two steps, the platform, a truck bay too wide to jump, the far stub of platform, a crate
-  'P0.4': { scene: 'neon', seed: 64, plats: [G, [5.96, 8, 1, 'steel', false], [8, 10.2, 2.04, 'steel', false], [10.2, 29.03, 3.07, 'steel', false], [34.38, 37.55, 3.07, 'steel', false], [37.86, 39.78, 1.68, 'crate', false]] },
+  'P0.4': { scene: 'neon', seed: 64, plats: [G, [5.96, 8, 1, 'steel', false], [8, 10.2, 2.04, 'steel', false], [10.2, 29.03, 3.07, 'steel', false], [34.38, 37.55, 3.07, 'steel', false], [37.86, 39.78, 1.68, 'crate', false],
+    // obstacles copied into the picture (manifest props): crates and a dumpster on the street, crates up on the platform (these have a base, so they only block whoever is up there)
+    [13.27, 15.31, 1.68, 'crate'], [18.07, 20.11, 1.68, 'crate'], [20.28, 24.79, 3.0, 'crate'], [30.79, 32.83, 1.68, 'crate'], [15.67, 17.71, 4.63, 'crate', true, 3.07], [25.75, 27.79, 4.63, 'crate', true, 3.07]] },
   'P0.5': { scene: 'alley', plats: [G] },
   // measured from the painted street (art/bg_R_2.png): the crate, then the flatbed trailer loaded with scaffold boards and poles
   'R.2': { scene: 'neon', seed: 72, plats: [G, [6.54, 7.98, 1.32, 'crate', false], [10.18, 24.07, 2.06, 'steel', false]] },
   // measured from the painted back lot (art/bg_R_5.png): crate stacks, kegs and the dumpster lid
-  'R.5': { scene: 'alley', plats: [G, [.24, 2.63, 2.39, 'crate', false], [2.63, 3.64, 1.72, 'crate', false], [4.28, 6.3, .95, 'crate', false], [6.44, 7.79, 2.56, 'crate', false], [7.79, 8.75, 1.72, 'crate', false],
-    [11.1, 13.34, 2.42, 'crate', false], [13.38, 14.39, 1.72, 'crate', false], [14.98, 19.6, 2.5, 'crate', false]] },
+  'R.5': { scene: 'alley', plats: [G, [4.28, 6.3, 1.6, 'crate', false], [6.44, 7.79, 3.2, 'crate', false], [7.79, 8.75, 2.36, 'crate', false],
+    [11.1, 13.34, 3.06, 'crate', false], [13.38, 14.39, 2.36, 'crate', false], [14.98, 19.6, 3.1, 'crate', false]] },
   '7.6': { scene: 'dock', plats: [[-60, 22, 0, 'steel', false]] },
   '1.1': { track: 'x' },
   '1.6': { scene: 'roofs', seed: 12, plats: [[-6, 4.6, 2.6, 'roof'], [6.1, 10.1, 1.8, 'roof'], [12.1, 15.6, 2.2, 'roof'], [18.1, 26, 1.2, 'roof']] },
@@ -111,7 +113,7 @@ async function buildPage(n) {
       p.mats.push(mat);
     });
     // what the player stands on
-    p.plats = (def.plats || [G]).map(([a, b, top, look, solid = true]) => ({ x0: x0 + a, x1: x0 + b, top, look, solid }));
+    p.plats = (def.plats || [G]).map(([a, b, top, look, solid = true, base = -99]) => ({ x0: x0 + a, x1: x0 + b, top, look, solid, base })); p.art = art;
     const hasArt = art && (art.far || art.near || art.story), ghost = hasArt && !def.keepBlocks;   // painted frames hide the stand-in blocks; ?plats=1 shows them faintly for lining art up
     p.plats.forEach((b, k) => { if (!b.look && !(ghost && SHOWPLATS)) return; if (ghost && !SHOWPLATS) return;
       const bx0 = Math.max(b.x0, x0 - 1.5), bx1 = Math.min(b.x1, x1 + 1.5), bw = bx1 - bx0;
@@ -157,7 +159,7 @@ class Char {
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(CW / PPU, CH / PPU), this.mat); this.mesh.visible = false; scene.add(this.mesh);
     Object.assign(this, { kind, x: 0, y: 0, vx: 0, vy: 0, wx: 0, wy: 0, face: 1, state: 'idle', st: 0, hp: 3, panel: null, relaxed: true, phase: 0,
       inv: 0, ai: false, wait: 1, hop: null, pose: null, free: true, shown: false, zlift: 0, spin: 0, ghost: false, struck: false, hitDone: false,
-      grounded: true, reach: 2.05, windT: .42, speed: 2.5, gone: false, safe: null, knockTo: null, guard: null, noRespawn: false });
+      size: 1, tint: null, alpha: 1, float: false, grounded: true, reach: 2.05, windT: .42, speed: 2.5, gone: false, safe: null, knockTo: null, guard: null, noRespawn: false });
   }
   setPanel(p) { this.panel = p; this.mat.stencilWrite = true; this.mat.stencilRef = p.ref; this.mat.stencilFunc = THREE.EqualStencilFunc; this.mesh.renderOrder = p.charOrder; }
   unclip() { this.mat.stencilWrite = false; this.mesh.renderOrder = 950; }
@@ -174,9 +176,10 @@ class Char {
       this.x = this.wx = h.x0 + (h.x1 - h.x0) * u; this.wy = h.y0 + (h.y1 - h.y0) * u + s * h.h; this.zlift = s * 1.1; this.spin = (h.spin || 0) * u;
       if (u >= 1) { this.hop = null; this.zlift = this.spin = 0; this.setPanel(h.to); this.x = h.x1; this.y = h.y1 - (h.to.y0 + GROUND); this.vx = this.vy = 0; this.grounded = true;
         if (!h.keep) this.set('idle'); h.done(); } }
+    else if (this.float) { this.x += this.vx * dt; this.wx = this.x; this.wy = p.y0 + GROUND + this.y; }   // moved by a scene, not by the ground
     else {
       const px = this.x; this.x += this.vx * dt;
-      for (const b of p.plats) if (b.solid && this.y < b.top - .25 && this.x > b.x0 - .35 && this.x < b.x1 + .35) this.x = px < (b.x0 + b.x1) / 2 ? b.x0 - .35 : b.x1 + .35;
+      for (const b of p.plats) if (b.solid && this.y < b.top - .25 && this.y > b.base - .3 && this.x > b.x0 - .35 && this.x < b.x1 + .35) this.x = px < (b.x0 + b.x1) / 2 ? b.x0 - .35 : b.x1 + .35;
       const fl = floorAt(p, this.x, this.y);
       if (this.vy > 0 || this.y > fl + 1e-4) { this.grounded = false; this.y += this.vy * dt; this.vy -= 28 * dt;
         if (this.vy <= 0 && this.y <= fl) { this.y = fl; this.vy = 0; this.grounded = true; if (this.state === 'jump') this.set('idle'); } }
@@ -194,13 +197,13 @@ class Char {
     const fr = this.hop ? (this.hop.keep ? 'hurt' : 'jump') : frameFor(this);
     if (this.pup.draw(this.pose, { air: !this.grounded || !!this.hop, hurt: this.state === 'hurt' || this.state === 'down', frame: fr })) this.tex.needsUpdate = true;
     this.mesh.visible = !(this.inv > 0 && Math.floor(t * 14) % 2 === 0);
-    this.mesh.position.set(this.wx, this.wy + (BASE - CH / 2) / PPU, ZACT + this.zlift);
-    this.mesh.scale.x = this.face; this.mesh.rotation.z = -this.spin * this.face;
-    const f = this.hop ? 1 : this.panel.focus; this.mat.color.setScalar(.84 + .16 * f);
+    this.mesh.position.set(this.wx, this.wy + this.size * (BASE - CH / 2) / PPU, ZACT + this.zlift);
+    this.mesh.scale.set(this.face * this.size, this.size, 1); this.mat.opacity = this.alpha; this.mesh.rotation.z = -this.spin * this.face;
+    const f = this.hop ? 1 : this.panel.focus; this.mat.color.setScalar(this.tint != null ? this.tint : .84 + .16 * f);
   }
 }
 function spawn(c, p, lx, o = {}) { c.setPanel(p); c.x = p.x0 + lx; c.y = o.y || 0; c.vx = c.vy = 0; c.hop = null; c.gone = false; c.shown = o.shown !== false; c.grounded = true;
-  c.face = o.face || 1; c.state = 'idle'; c.st = 0; c.ai = false; c.free = true; c.ghost = false; c.relaxed = !!o.relaxed; c.knockTo = null; c.guard = null; c.spin = 0; c.snatch = c.hasCase = false; c.heavy = false;
+  c.face = o.face || 1; c.size = 1; c.tint = null; c.alpha = 1; c.float = false; c.state = 'idle'; c.st = 0; c.ai = false; c.free = true; c.ghost = false; c.relaxed = !!o.relaxed; c.knockTo = null; c.guard = null; c.spin = 0; c.snatch = c.hasCase = false; c.heavy = false;
   if (o.hp) c.hp = o.hp; c.wx = c.x; c.wy = p.y0 + GROUND + c.y; if (c === hero) { c.safe = { x: c.x, y: c.y }; c.noRespawn = false; } }
 
 // ---------- input
@@ -283,7 +286,7 @@ async function storyFrame(id, hold = .9, v) {
   let n = 0, cur = null, k = clamp(p.w / 12, .62, 1);
   for (const s of p.def.lettered ? [] : lines) { const l = parseLine(s);
     if (l.t === 'cap') { caption(p, l.text); await wait(.8); continue; }
-    if (l.t === 'sfx') { burst(l.text, p.cx + (n % 2 ? -1 : 1) * p.w * .1, p.cy + p.h * .1, clamp(p.w / 11, .55, 1.3), 2, 1.3); shake = .4; await wait(.9); continue; }
+    if (l.t === 'sfx') { if (p.sfx) { await p.sfx(l.text); continue; } burst(l.text, p.cx + (n % 2 ? -1 : 1) * p.w * .1, p.cy + p.h * .1, clamp(p.w / 11, .55, 1.3), 2, 1.3); shake = .4; await wait(.9); continue; }
     if (cur) dropBalloon(cur);
     const b = L.balloon(wrap(l.text), l.t), rxW = b.rx * UNIT * k, ryW = b.ry * UNIT * k;
     const fx = clamp(p.x0 + p.w * (n % 2 ? .66 : .34), p.x0 + rxW + .3, Math.max(p.x0 + rxW + .3, p.x1 - rxW - .3)), fy = p.y1 - ryW - .4;
@@ -298,7 +301,7 @@ const WORDS = ['POW!', 'BAM!', 'WHAP!', 'THOK!'];
 function knock(e) {   // the hit that sends someone out of this frame and into another
   const k = e.knockTo; e.knockTo = null; e.ai = false; e.free = true; e.set('down'); e.vx = e.vy = 0; e.grounded = false; e.flown = false; e.unclip(); e.face = -hero.face;
   e.hop = { x0: e.x, y0: e.wy + .5, x1: k.x, y1: k.p.y0 + GROUND + (k.y || 0), t: 0, dur: .8, h: k.h == null ? 2.6 : k.h, to: k.p, keep: true, spin: 6.283 * 1.5,
-    done: () => { e.flown = true; shake = .8; if (k.word) burst(k.word, k.x, k.p.y0 + GROUND + (k.y || 0) + 2.6, 1.2, 2, 1); if (k.hide) e.shown = false; } };
+    done: () => { e.flown = true; shake = .8; if (k.word) burst(k.word, k.x, k.p.y0 + GROUND + (k.y || 0) + 5.2, 1.2, 2, 1); if (k.hide) e.shown = false; } };
   wait(.22).then(() => { k.p.seen = true; focusPanel(k.p); });
 }
 function heroHits(e) {
@@ -309,7 +312,7 @@ function heroHits(e) {
     const k = e.knockTo, f = hero.face, lo = k.p.x0 + 1.9, hi = k.p.x1 - 1.9; let tx = k.fx != null ? k.fx : clamp(e.x + f * 4.5, lo, hi), ok = !k.dir || f === k.dir;
     if ((tx - e.x) * f < 0) { if (k.fx != null) ok = false; else { tx = clamp(e.x, lo, hi); if (Math.abs(tx - e.x) > .6) ok = false; } }
     if (ok) k.x = tx; else { e.hp = 1; e.held = true; } }
-  const x = hero.x + hero.face * 1.55, y = hero.wy + 3.1;
+  const x = hero.x + hero.face * 1.55, y = Math.max(hero.wy, e.wy) + 5.5;   // the word goes over their heads, not across them
   if (e.hp <= 0) { hitstop = .17; shake = .6; burst('KRAKK!', x, y + .3, 1.25, 2);
     if (e.knockTo) knock(e); else { e.set('down'); e.vx = hero.face * 7.5; e.vy = 7; e.ai = false; } }
   else if (e.held) { e.held = false; e.set('hurt'); e.st = 0; e.vx = hero.face * 5; hitstop = .085; shake = .35; burst(WORDS[combo % WORDS.length], x, y, 1, 0);
@@ -320,7 +323,7 @@ function heroHits(e) {
 }
 function hurtHero(dir, word) {
   hero.hp--; hero.inv = .9; hero.vx = dir * 4.2; hitstop = .07; shake = .3;
-  burst(word, hero.x, hero.wy + 2.7, .85, 1); hud();
+  burst(word, hero.x, hero.wy + 5.3, .85, 1); hud();
   if (hero.hp <= 0 && onDown) { hero.set('down'); hero.vy = 6; const f = onDown; onDown = null; f(); }   // this time he stays down, and it costs him the package
   else if (hero.hp <= 0) { hero.set('down'); hero.vy = 6;
     lose(10); wait(1.7).then(() => { hero.hp = 5; hero.inv = 1.6; if (hero.state === 'down') hero.set('idle'); hud(); if (hero.shown) shout(hero, 'Not today.', 1.3); }); }
@@ -365,8 +368,8 @@ function playEnemy(e, dt) {
       break;
     case 'wind': e.vx = 0; if (e.st > e.windT) { e.set('strike'); e.struck = false; } break;
     case 'strike':
-      if (!e.struck && e.st > .04 && hero.state === 'dodge' && dist < e.reach + 2.6) { e.struck = true; burst('WHIFF!', e.x + e.face * 1.4, e.wy + 3.6, .8, 1, .8); e.set('hurt'); e.st = -.4; e.vx = e.face * 2; break; }   // he swings at air and is wide open
-      if (!e.struck && e.st > .04 && hero.inv <= 0 && hero.state === 'block' && hero.face === -e.face && !e.heavy && inReach(e, hero)) { e.struck = true; burst('BLOCK!', hero.x + hero.face * .9, hero.wy + 3.2, .75, 0, .7); hero.vx = e.face * 2.6; hitstop = .05; shake = .15; }
+      if (!e.struck && e.st > .04 && hero.state === 'dodge' && dist < e.reach + 2.6) { e.struck = true; burst('WHIFF!', e.x + e.face * 1.4, e.wy + 5.6, .8, 1, .8); e.set('hurt'); e.st = -.4; e.vx = e.face * 2; break; }   // he swings at air and is wide open
+      if (!e.struck && e.st > .04 && hero.inv <= 0 && hero.state === 'block' && hero.face === -e.face && !e.heavy && inReach(e, hero)) { e.struck = true; burst('BLOCK!', hero.x + hero.face * .9, hero.wy + 5.3, .75, 0, .7); hero.vx = e.face * 2.6; hitstop = .05; shake = .15; }
       else if (!e.struck && e.st > .04 && hero.inv <= 0 && hero.state !== 'down' && inReach(e, hero)) { e.struck = true; hurtHero(e.face, e.snatch ? 'YOINK!' : hero.state === 'block' ? 'CRACK!' : 'THWACK!');
         if (e.snatch) { e.snatch = false; e.hasCase = true; e.ai = false; e.free = true; e.face = 1; e.vx = 3; e.set('walk'); hint('He has the case! Catch him and hit him!'); } }
       if (e.st > .3) { e.set('idle'); e.wait = .6 + Math.random() * .9; }
@@ -384,6 +387,31 @@ async function diveAfter(p, x, text) { control = false; hero.vx = 0; await until
 // things in the frames that are not people
 function dropCrate(p, x, y) { const mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3), clipMat({ map: tex(blockCanvas('crate', 1.3, 1.3, 2)) }, p.ref)));
   mesh.renderOrder = p.charOrder + .1; drops.push({ mesh, p, x, y, vy: 0 }); }
+// Where a point of a story picture (fractions from its left and top) sits on the page, and a patch laid over part of the picture.
+function picRect(p, fx0, fy0, fx1, fy1) { const img = p.art && p.art.story; if (!img) return null; const poi = p.art.poi || [.5, .5], S = 1.03;
+  const Bw = p.w + .8, Bh = p.h + .8, su = Math.max(Bw / img.width, Bh / img.height), left = -.4 + (Bw - img.width * su) * poi[0], top = p.h + .4 - (Bh - img.height * su) * poi[1];
+  const X = f => p.cx + (left + f * img.width * su - p.w / 2) * S, Y = f => p.cy + (top - f * img.height * su - p.h / 2) * S;
+  return { x: (X(fx0) + X(fx1)) / 2, y: (Y(fy0) + Y(fy1)) / 2, w: X(fx1) - X(fx0), h: Y(fy0) - Y(fy1), X, Y }; }
+function picQuad(p, r, canvas) { const q = picRect(p, ...r); if (!q) return null;
+  const mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(q.w, q.h), clipMat({ map: tex(canvas) }, p.ref))); mesh.position.set(q.x, q.y, -.58); mesh.renderOrder = p.charOrder; return mesh; }
+function shadeCanvas() { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  g.translate(128, 112); g.scale(1, 1.25); const gr = g.createRadialGradient(0, 0, 30, 0, 0, 100); gr.addColorStop(0, 'rgba(10,13,30,.93)'); gr.addColorStop(.55, 'rgba(10,13,30,.86)'); gr.addColorStop(1, 'rgba(10,13,30,0)');
+  g.fillStyle = gr; g.fillRect(-128, -128, 256, 256); return c; }
+// The men from the van, as dark figures crossing the pavement and going in at the front door. Needs the version of the picture without the painted men (manifest: "clean": true).
+let vanMan = null;
+async function vanWalk() { const p = P['2.6'], a = (manifest.panels || {})['2.6'] || {}; if (!a.clean || !picRect(p, 0, 0, 1, 1)) return;
+  for (const [sx, sy, w, h, dx] of a.cover || []) { const img = p.art.story, c = document.createElement('canvas'), g = c.getContext('2d'), f = 14;   // paint over the men drawn in the picture with a clean piece of wall and pavement from beside them
+    c.width = w; c.height = h; g.drawImage(img, sx, sy, w, h, 0, 0, w, h); g.globalCompositeOperation = 'destination-in';
+    const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(f / w, '#000'); gr.addColorStop(1 - f / w, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    picQuad(p, [dx / img.width, sy / img.height, (dx + w) / img.width, (sy + h) / img.height], c); }
+  const q = picRect(p, 0, 0, 1, 1), at = (fx, fy) => [q.X(fx), q.Y(fy) - (p.y0 + GROUND)], men = [thug, goon, vanMan || (chars.push(vanMan = new Char('goon')), vanMan)];
+  await wait(1.4);
+  await Promise.all(men.map(async (c, i) => { await wait(i * 1.0);
+    const [x0, y0] = at(.33, .865 + i * .012), [x1] = at(.50, 0), [x2, y2] = at(.497, .71);
+    spawn(c, p, x0 - p.x0, { face: 1 }); c.float = true; c.y = y0; c.size = .58; c.tint = .03;
+    await walkTo(c, x1, 1.5); c.set('walk'); let u = 0;
+    await until(dt => { u = Math.min(1, u + dt / 1.5); c.x = x1 + (x2 - x1) * u; c.y = y0 + (y2 - y0) * u; c.size = .58 - .24 * u; c.alpha = u < .75 ? 1 : 1 - (u - .75) / .25; c.phase += dt * 5; return u >= 1; });
+    c.shown = false; c.alpha = 1; c.size = 1; c.tint = null; c.float = false; })); }
 function addSpot(p, r, pos) { const mesh = put(new THREE.Mesh(new THREE.CircleGeometry(r, 48), clipMat({ color: 0xfff3b0, opacity: .26, blending: THREE.AdditiveBlending }, p.ref)));
   mesh.renderOrder = p.base + 17; spot = { mesh, p, r, pos, heat: 0 }; }
 function addFork(p) { const mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(5.6, 4.4), clipMat({ map: tex(forkliftCanvas()), side: THREE.DoubleSide }, p.ref)));
@@ -468,7 +496,7 @@ async function encounter(p, men, o = {}) {
   await until(() => out || (out = men.every(e => e.state === 'down') ? 'won' : !o.noExit && hero.grounded && hero.x > p.x1 - 1.3 ? 'fled' : null));
   onDown = null; control = false; hint('');
   if (out === 'robbed') {   // they take it and go; he gets up without it
-    burst('YOINK!', hero.x, hero.wy + 3.4, .9, 1, 1); await wait(.9);
+    burst('YOINK!', hero.x, hero.wy + 5.3, .9, 1, 1); await wait(.9);
     for (const e of men) if (e.state !== 'down') { e.ai = false; e.free = true; e.ghost = true; walkTo(e, p.x1 + 2.5, 5).then(() => { e.shown = false; }); }
     await wait(1.5); hero.hp = 5; hero.inv = 0; hero.set('idle'); hud(); }
   return out;
@@ -486,11 +514,11 @@ async function prologue1() {
   await until(() => hero.x > a.x0 + 21.5 && hero.grounded && !hero.busy);
   await endAction(); await walkTo(hero, a.x1 + 1.6, 3.6); hero.shown = false;
   // the pickup
-  enterPanel(b); spawn(keeper, b, b.w - 3.6, { face: -1, relaxed: true }); await heroEnters(b, 2);
+  enterPanel(b); spawn(keeper, b, 11.7, { face: -1, relaxed: true }); await heroEnters(b, 2);   // he stands at the far end of the counter, in full view
   await say(keeper, "You're the new kid?"); await say(hero, "Depends who's asking."); await say(keeper, "You Danny's brother?"); await say(hero, '...'); await say(hero, 'Was.');
   hero.free = false; control = true; hint('Walk to the counter');
-  await until(() => hero.x > keeper.x - 2.7); control = false; hero.vx = 0; hero.set('idle'); hero.face = 1;
-  await press('J or X: take the package'); burst('GOT IT', hero.x + 1.2, hero.wy + 3, .7, 1, .9);
+  await until(() => hero.x > b.x0 + 7.2); control = false; hero.vx = 0; hero.set('idle'); hero.face = 1;
+  await press('J or X: take the package'); burst('GOT IT', hero.x + 1.2, hero.wy + 5.2, .7, 1, .9);
   await say(keeper, 'He was better at this.'); await say(hero, "I'm getting that a lot.");
   hero.free = true; await walkTo(hero, b.x0 - 1.6, 3.6); hero.shown = false; keeper.shown = false;
   // the clock
@@ -512,7 +540,7 @@ async function prologue2() {
   tax1.guard = tax2.guard = () => true;   // try as he might
   arm(tax1, { speed: 3, wait: .5, windT: .34 }); arm(tax2, { speed: 2.6, wait: 1.1, windT: .38 });
   startAction('J punch  •  K block  •  L dodge'); hero.hp = 3; hud();
-  await Promise.race([encounter(a, [tax1, tax2], { noExit: true }), wait(11).then(() => { if (onDown) { onDown = null; hero.inv = 0; hero.hp = 1; hurtHero(-1, 'SHOVE!'); hero.set('down'); control = false; hint(''); burst('YOINK!', hero.x, hero.wy + 3.4, .9, 1, 1);
+  await Promise.race([encounter(a, [tax1, tax2], { noExit: true }), wait(11).then(() => { if (onDown) { onDown = null; hero.inv = 0; hero.hp = 1; hurtHero(-1, 'SHOVE!'); hero.set('down'); control = false; hint(''); burst('YOINK!', hero.x, hero.wy + 5.3, .9, 1, 1);
     for (const e of [tax1, tax2]) { e.ai = false; e.free = true; e.ghost = true; walkTo(e, a.x1 + 2.5, 5).then(() => { e.shown = false; }); } } })]);
   await until(() => !tax1.shown && !tax2.shown); foes = [];
   hero.hp = 5; hero.inv = 0; hero.set('idle'); hero.face = 1; hudOn = false; hud(); hero.relaxed = true;
@@ -618,11 +646,16 @@ async function page2() {
   hero.free = false; control = true; hint('Walk to the desk');
   await until(() => hero.x > w1.x - 2.7); control = false; hero.vx = 0; hero.set('idle'); hero.face = 1;
   hint('J or X: take the case'); pressed.punch = false; { let t = 0; await until(dt => pressed.punch || (AUTO && (t += dt) > .6)); } hint('');
-  burst('CLICK', hero.x + 1.2, hero.wy + 3, .7, 1, .9);
+  burst('CLICK', hero.x + 1.2, hero.wy + 5.2, .7, 1, .9);
   await say(w1, 'Only to her. Nobody else.\nGet it signed.'); await say(hero, "That's the job.");
   setClock(36, 480, 23, 24); radio("Thirty-six minutes, kid.\nClock's running.", 2.6); await wait(2.4);
   await walkTo(hero, c.x0 - 1.6, 3.6); hero.shown = false;
-  for (const id of ['2.5', '2.6', '2.7', '2.8']) await storyFrame(id);
+  await storyFrame('2.5');
+  { const walk = vanWalk(); await storyFrame('2.6', 1.2); await walk; }
+  { const p = P['2.7'], dark = picQuad(p, [.24, -.08, .78, 1.02], shadeCanvas());   // the window stays dark until the shots, flashes with each, and goes dark again
+    p.sfx = async () => { for (let i = 0; i < 3; i++) { if (dark) dark.visible = false; shake = .5; burst('POP!', p.cx + (i - 1) * p.w * .27, p.y1 - 1.1 - (i % 2) * .5, clamp(p.w / 11, .55, 1.1), 2, .5); await wait(.13); if (dark) dark.visible = true; await wait(i < 2 ? .3 : .9); } };
+    await storyFrame('2.7'); }
+  await storyFrame('2.8');
 }
 
 async function page3() {

@@ -241,6 +241,10 @@ export function panelLayers(def, art) {
     if (art.near) { const near = keyGreen(art.near), z = art.zoom || 1.08, up = art.lift || 0;
       for (const [sx, sy, dx, dy, w, h] of art.patch || []) { const W = near.width, H = near.height;   // copy a clean bit of the picture over a blemish (the image tool's corner mark)
         near.getContext('2d').drawImage(near, sx * W, sy * H, w * W, h * H, dx * W, dy * H, w * W, h * H); }
+      if (art.props) { const [src, sg] = mk(near.width, near.height), g2 = near.getContext('2d'); sg.drawImage(near, 0, 0);   // copies of things already in the picture, set down somewhere else: [x0, y0, x1, y1, to x, to y, outline] in picture pixels
+        for (const [x0, y0, x1, y1, dx, dy, poly] of art.props) { g2.save();
+          if (poly) { g2.beginPath(); poly.forEach(([a, b], i) => g2[i ? 'lineTo' : 'moveTo'](a - x0 + dx, b - y0 + dy)); g2.closePath(); g2.clip(); }
+          g2.drawImage(src, x0, y0, x1 - x0, y1 - y0, dx, dy, x1 - x0, y1 - y0); g2.restore(); } }
       for (const r of art.erase || []) near.getContext('2d').clearRect(r[0] * near.width, r[1] * near.height, (r[2] - r[0]) * near.width, (r[3] - r[1]) * near.height);   // parts of the picture to leave out
       add(.5, 110, m => cover(m, near, 1, z, 0, up));   // pinned bottom-left, so the image's corner mark falls outside the frame
       for (const r of art.over || []) { add(.5, 110, m => cover(m, near, 1, z, 0, up, r)); L[L.length - 1].over = true; } }   // parts of the picture that stand in front of the characters (a counter, a parked car)
