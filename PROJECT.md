@@ -1,6 +1,6 @@
 # Signature Required — project notes
 
-Issue #1: **Last Run of the Night**. Status as of 2026-11-20.
+Issue #1: **Last Run of the Night**. Status as of 2026-11-23.
 
 - Play it: https://snorbworks.github.io/signature-required/
 - Storyboard (every frame, its dialog and what the picture should show): https://snorbworks.github.io/signature-required/storyboard.html
@@ -55,7 +55,7 @@ No install or build step. Useful addresses: `?page=P1`, `P2`, `R`, or `1` to `7`
 | `art/manifest.json` | Which picture belongs to which frame or character |
 | `art/` | All finished pictures |
 
-Not in this repo (they are on the office computer in Downloads): the full written script `Signature_Required_Issue_001_Revised_Storyboard.md` and the two style reference pictures `Rainy Harbor Showdown.png` and `Rainy Harbor Showdown_ Pow!.png`.
+Not in this repo: the full written script `Signature_Required_Issue_001_Revised_Storyboard.md` and the two style reference pictures `Rainy Harbor Showdown.png` and `Rainy Harbor Showdown_ Pow!.png`. They were in Downloads on the office computer until 2026-11-23 and are no longer there. Until they turn up, use finished art as the style sample (`art/p2_near.png`, `art/p2_far.png`, `art/sr_1_1.png`).
 
 ## Rules for making the images
 
@@ -87,29 +87,40 @@ Not in this repo (they are on the office computer in Downloads): the full writte
 - Save as `art/<name>.png` and add it to `manifest.json` under `sprites` with `file`, `height` and the eight `frames` names.
 - A walk cycle is a second sheet: 4 frames in 2 rows of 2, made in a fresh chat with only that character's sheet attached.
 
-**Action frame pictures** (per playable frame):
+**Action frame backgrounds** (per playable frame). Scale matters most here: 1 game unit is half a metre, Milo is 3.5 units tall, a door should come out about 4.3 units tall, and feet must land on a painted surface.
 
-- `far`: the backdrop.
-- `near`: the ground and foreground on a green background, cut out by the game.
+- `near`: everything the characters touch (ground, platforms, doors, props), drawn flat-on like a stage set. If it is a wall or a room it fills the picture; if there is open sky, the sky is flat green and gets cut out.
+- `far`: only needed behind a `near` with open sky (a distant skyline, no foreground).
 - `teaser`: a frozen picture of that frame's action, shown whenever the frame is not the one being played.
+
+How a `near` is made:
+
+1. Add the frame to `SPECS` in `tools/guide.py` and run `python3 tools/guide.py tools/guides`. It writes a flat-colour blockout at the exact shape of the picture: floor, platforms, door, props, and a pink figure the height of a person.
+2. New AI Studio chat. Attach the blockout first, then `art/p2_near.png` as the style sample. Set the aspect ratio the tool printed. Prompt: "Image 1 is a flat-colour BLOCKOUT ... drawn to exact scale ... This is a strict paint-over: every coloured block keeps exactly the same position, width and height ... perfectly flat-on, like a theatre stage set, no side walls, no vanishing-point perspective", then say what each colour is, and that the pink figure is only a ruler and must not be drawn.
+3. Never attach an earlier attempt at the same scene as the style sample: the model just copies it.
+4. The model still drifts: it moves props and draws doors a different size. So measure the finished picture and make the game fit it: set the platform positions in `GAME` in `src/main.js` from the picture, and in `art/manifest.json` set `zoom` (picture size; pick it so a door is about 4.3 units), `lift` (raise or lower the picture so feet meet the ground), and where needed `over` (parts drawn in front of the characters, like a counter), `erase` (parts left out), `patch` (copy clean paint over the tool's corner mark) and `indoor` (no rain).
+5. Check in the game with `?page=...&plats=1`, which shows the platforms faintly over the picture.
+
+A request to edit a finished picture ("make the door taller, cut a gap here") works about half the time and costs an image.
 
 ## What is done
 
-- 16 story frame pictures: 1.1–1.5, 2.2, 2.5–2.8, 3.1, 3.3, 3.5 (1.1, 3.1 and 3.3 were redrawn on 2026-11-20).
+- 13 story frame pictures: 1.1–1.5, 2.2, 2.5–2.8, 3.1, 3.3, 3.5 (1.1, 3.1 and 3.3 were redrawn on 2026-11-20).
 - 10 character sheets: Milo, Tommy, Slim, the two package-tax thugs, the two corner thugs, the Anchor doorman, the shopkeeper, Gage. Milo, Tommy and Slim also have walk cycles.
-- 2 freeze-frames (1.6, 4.1) and backgrounds for the first pier fights (4.1, 4.3, 4.4).
+- 2 freeze-frames (1.6, 4.1).
+- Backgrounds for 9 playable frames: the first pier fights (4.1, 4.3, 4.4) and, made to scale on 2026-11-23, the whole opening: rooftops P0.2 (with a dusk skyline), shop P0.3, loading platform P0.4, alley P0.5, Harlow Street R.2, the Anchor's back lot R.5.
 
-## Images left to create: about 115
+## Images left to create: about 100
 
 | What | Count | Which |
 |---|---|---|
 | Story frame pictures | 30 | P0.1, P0.6, P0.7a–d, R.1, R.3 (3 versions), R.4, R.6 (2 versions), 4.2, 4.5–4.8, 5.1, 5.4–5.6, 6.2, 6.4, 6.7, 7.2–7.5, 7.8 |
-| Freeze-frames for playable frames | 26 | P0.2–P0.5, R.2, R.5, 1.7, 2.1, 2.3, 2.4, 3.2, 3.4, 3.6, 4.3, 4.4, 5.2, 5.3, 5.7, 5.8, 6.1, 6.3, 6.5, 6.6, 7.1, 7.6, 7.7 |
-| Action backgrounds (backdrop + foreground each) | up to 50 | 25 playable frames; fewer if neighbouring frames share a location |
+| Freeze-frames for playable frames | 25 | P0.2–P0.5, R.2, R.5, 1.7, 2.1, 2.3, 2.4, 3.2, 3.4, 3.6, 4.3, 4.4, 5.2, 5.3, 5.7, 5.8, 6.1, 6.3, 6.5, 6.6, 7.1, 7.6 |
+| Action backgrounds | 18 to 36 | 1.6, 1.7, 2.1, 2.3, 2.4, 3.2, 3.4, 3.6, 5.2, 5.3, 5.7, 5.8, 6.1, 6.3, 6.5, 6.6, 7.1, 7.6: one picture each, plus a skyline only where there is open sky and no existing one fits |
 | Character sheets | 1 | Dock worker |
 | Walk cycles | 8 | The seven new characters and the dock worker |
 
-At about 13 a day that is roughly nine days. Mrs. Okafor, the clerk and Vera only appear in story frames, so they need no sheet; describe them the same way each time.
+At about 13 a day that is roughly eight days; allow for retries (on 2026-11-23, 13 images gave 7 keepers). Mrs. Okafor, the clerk and Vera only appear in story frames, so they need no sheet; describe them the same way each time.
 
 Suggested order: story frames first (they change the feel most), then freeze-frames, then backgrounds, then walk cycles.
 
@@ -117,7 +128,9 @@ Suggested order: story frames first (they change the feel most), then freeze-fra
 
 - The two "Earlier tonight" deliveries and their dialog were written by the assistant and have not been reviewed.
 - Fight difficulty and the clock's time allowances are untuned.
-- Stand-in scenery is wrong in places (the shop and the prologue alley borrow the city and pier).
+- The clock frame (P0.4) was simplified to fit its picture: steps, a loading platform and a truck bay, no jump that saves time.
+- The rooftop stairwell hut was left out of P0.2 because its door came out too small.
+- Doors in the new backgrounds run a little tall (about 1.3 times Milo's height).
 - Phone: on-screen BLOCK and DODGE buttons are untested by touch; hints still say "arrow keys".
 - The screen-edge blur is new and has only been checked on a desktop.
 - The README still describes an older, shorter version.
