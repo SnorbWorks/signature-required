@@ -11,6 +11,7 @@ const OPEN = LEVEL.pages.filter(q => q.label).length;   // pages before page 1: 
 
 const PAGE = { w: 42, h: 27 };
 const SOFT = .28;   // how soft the frames out of focus are (1 = the old heavy blur)
+const SHOWPLATS = new URLSearchParams(location.search).has('plats');
 const GROUND = 1.25, ZACT = -.5, UNIT = .022, ROLL = .07, FOV = 35;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const $ = id => document.getElementById(id);
@@ -26,12 +27,17 @@ fire.push([.6, 9.2, 12 * 1.55, 'steel', false]);
 const FLOOR = [-60, 100, 0, 'steel', false];
 const GAME = {
   'P0.1': { track: 'x' },
-  'P0.2': { scene: 'roofs', seed: 61, plats: [[-6, 9.4, 2.2, 'roof'], [11, 16.6, 2.2, 'roof'], [18, 30, 3, 'roof']] },
+  // measured from the painted rooftops (art/bg_P0_2.png): three roofs at one height, two short gaps
+  'P0.2': { scene: 'roofs', seed: 61, plats: [[-6, 7.9, 2.2, 'roof'], [9, 15.57, 2.2, 'roof'], [16.95, 30, 2.2, 'roof']] },
   'P0.3': { plats: [FLOOR] },
-  'P0.4': { scene: 'neon', seed: 64, plats: [G, [5.2, 7.2, 1, 'steel', false], [7.2, 9.4, 2, 'steel', false], [9.4, 24, 3, 'steel', false], [27.1, 45, 3, 'steel', false], [27.6, 29, 1.1, 'crate', false], [29.6, 33, 2.2, 'container']] },
+  // measured from the painted loading platform (art/bg_P0_4.png): two steps, the platform, a truck bay too wide to jump, the far stub of platform, a crate
+  'P0.4': { scene: 'neon', seed: 64, plats: [G, [5.96, 8, 1, 'steel', false], [8, 10.2, 2.04, 'steel', false], [10.2, 29.03, 3.07, 'steel', false], [34.38, 37.55, 3.07, 'steel', false], [37.86, 39.78, 1.68, 'crate', false]] },
   'P0.5': { scene: 'alley', plats: [G] },
-  'R.2': { scene: 'neon', seed: 72, plats: [G, [6, 7.6, .95, 'crate', false], [8.4, 20.6, 1.9, 'steel', false]] },
-  'R.5': { scene: 'alley', plats: [G, [4.6, 6.4, 1, 'crate', false], [7, 9.6, 1.9, 'crate', false], [11.4, 14.4, 1.9, 'crate', false], [16.2, 18.6, 1.9, 'crate', false]] },
+  // measured from the painted street (art/bg_R_2.png): the crate, then the flatbed trailer loaded with scaffold boards and poles
+  'R.2': { scene: 'neon', seed: 72, plats: [G, [6.54, 7.98, 1.32, 'crate', false], [10.18, 24.07, 2.06, 'steel', false]] },
+  // measured from the painted back lot (art/bg_R_5.png): crate stacks, kegs and the dumpster lid
+  'R.5': { scene: 'alley', plats: [G, [.24, 2.63, 2.39, 'crate', false], [2.63, 3.64, 1.72, 'crate', false], [4.28, 6.3, .95, 'crate', false], [6.44, 7.79, 2.56, 'crate', false], [7.79, 8.75, 1.72, 'crate', false],
+    [11.1, 13.34, 2.42, 'crate', false], [13.38, 14.39, 1.72, 'crate', false], [14.98, 19.6, 2.5, 'crate', false]] },
   '7.6': { scene: 'dock', plats: [[-60, 22, 0, 'steel', false]] },
   '1.1': { track: 'x' },
   '1.6': { scene: 'roofs', seed: 12, plats: [[-6, 4.6, 2.6, 'roof'], [6.1, 10.1, 1.8, 'roof'], [12.1, 15.6, 2.2, 'roof'], [18.1, 26, 1.2, 'roof']] },
@@ -87,7 +93,7 @@ async function buildPage(n) {
   const defs = LEVEL.pages[n].panels.map(d => ({ sharp: true, scene: d.kind === 'caption' ? 'end' : 'storyph', seed: Math.round(parseFloat(d.id) * 10), ...d, ...(GAME[d.id] || {}) }));
   const artFor = {};
   for (const d of defs) { const a = (manifest.panels || {})[d.id]; if (!a) continue; artFor[d.id] = {};
-    for (const k in a) if (k === 'lettered') d.lettered = true; else if (k === 'poi') artFor[d.id].poi = a.poi; else artFor[d.id][k] = imgCache[a[k]] || (imgCache[a[k]] = await loadImage('./art/' + a[k])); }
+    for (const k in a) if (k === 'lettered') d.lettered = true; else if (typeof a[k] !== 'string') artFor[d.id][k] = a[k]; else artFor[d.id][k] = imgCache[a[k]] || (imgCache[a[k]] = await loadImage('./art/' + a[k])); }
   const rainTex = tex(rainCanvas(), true);
   const inkMat = new THREE.MeshBasicMaterial({ color: 0x0d0a12, transparent: true, depthTest: false, depthWrite: false });
   panels = defs.map((def, i) => {
@@ -100,23 +106,23 @@ async function buildPage(n) {
     panelLayers(def, art).forEach((ly, j) => {
       const mat = layerMat(tex(ly.canvas), tex(blurred(ly.canvas, ly.blur * SOFT)), ref), mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(ly.plane.w, ly.plane.h), mat));
       mesh.position.set(cx, cy + ly.plane.cy, -ly.d);
-      mesh.renderOrder = base + 1 + j + (ly.d < -ZACT ? 4 : 0);   // layers nearer than the action draw over the characters
-      if (ly.d >= -ZACT) p.charOrder = base + 1 + j + .5;
+      mesh.renderOrder = base + 1 + j + (ly.d < -ZACT || ly.over ? 4 : 0);   // layers nearer than the action draw over the characters
+      if (ly.d >= -ZACT && !ly.over) p.charOrder = base + 1 + j + .5;
       p.mats.push(mat);
     });
     // what the player stands on
     p.plats = (def.plats || [G]).map(([a, b, top, look, solid = true]) => ({ x0: x0 + a, x1: x0 + b, top, look, solid }));
-    const hasArt = art && (art.far || art.story);
-    p.plats.forEach((b, k) => { if (!b.look || (hasArt && !def.keepBlocks)) return;
+    const hasArt = art && (art.far || art.near || art.story), ghost = hasArt && !def.keepBlocks;   // painted frames hide the stand-in blocks; ?plats=1 shows them faintly for lining art up
+    p.plats.forEach((b, k) => { if (!b.look && !(ghost && SHOWPLATS)) return; if (ghost && !SHOWPLATS) return;
       const bx0 = Math.max(b.x0, x0 - 1.5), bx1 = Math.min(b.x1, x1 + 1.5), bw = bx1 - bx0;
-      const bh = b.look === 'steel' ? .32 : b.look === 'crate' ? b.top : b.top + GROUND + 1;
-      const mat = clipMat({ map: tex(blockCanvas(b.look, bw, bh, k + i * 3)) }, ref), mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), mat));
+      const bh = !b.look || b.look === 'steel' ? .32 : b.look === 'crate' ? b.top : b.top + GROUND + 1;
+      const mat = clipMat({ map: tex(blockCanvas(b.look || 'steel', bw, bh, k + i * 3)), ...(ghost ? { transparent: true, opacity: .45 } : {}) }, ref), mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), mat));
       mesh.position.set((bx0 + bx1) / 2, y0 + GROUND + b.top - bh / 2, ZACT); mesh.renderOrder = p.charOrder - .1; p.blocks.push(mat); });
     // the frozen teaser, shown until the reader gets here
     if (art && art.teaser) { const ly = artLayer(def, art.teaser, .3), mat = layerMat(tex(ly.canvas), tex(blurred(ly.canvas, ly.blur * SOFT)), ref);
       const mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(ly.plane.w, ly.plane.h), mat)); mesh.position.set(cx, cy + ly.plane.cy, -ly.d); mesh.renderOrder = base + 16;
       p.mats.push(mat); p.teaser = mat; }
-    if (def.kind !== 'caption') {
+    if (def.kind !== 'caption' && !(art && art.indoor)) {   // no rain inside a room
       const mat = layerMat(rainTex, rainTex, ref); mat.uniforms.rep.value.set(w / 6, h / 6);
       const mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(w + 1.2, h + 1.2), mat)); mesh.position.set(cx, cy, -.1); mesh.renderOrder = base + 18;
       p.mats.push(mat); rainMats.push(mat);
@@ -491,7 +497,7 @@ async function prologue1() {
   enterPanel(c); await heroEnters(c, 2.2);
   await say(hero, 'You have eight minutes.', 'radio'); await say(hero, 'For three blocks?'); await say(hero, 'Then this should\nbe easy.', 'radio');
   setClock(8, 26, 18, 12);
-  startAction('Beat the clock for a bonus  •  the jump up top is quicker, if you make it'); hudOn = false; hud();
+  startAction('Beat the clock for a bonus  •  along the street or up on the platform, just keep moving'); hudOn = false; hud();
   chat([[hero, 'You ever consider\nbeing encouraging?', 1.8], dot('No.', 1.1)]);
   await until(() => hero.x > c.x1 - 1.6 && hero.grounded && !hero.busy);
   await endAction(); await walkTo(hero, c.x1 + 1.6, 4); hero.shown = false;

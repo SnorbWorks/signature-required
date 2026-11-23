@@ -223,8 +223,11 @@ export function keyGreen(img, despill) {
     else if (despill && m > 4) p[i + 1] = mx; }   // take the green tinge off a cut-out's edges
   g.putImageData(d, 0, 0); return c;
 }
-function cover(m, img, ay, zoom = 1, ax = .5) { const s = Math.max(m.W / img.width, m.H / img.height) * zoom, w = img.width * s, h = img.height * s;
-  m.g.drawImage(img, (m.W - w) * ax, (m.H - h) * ay, w, h); }
+// lift = raise the picture by that many units; clip = [x0, y0, x1, y1] (fractions of the picture) draws only that part of it
+function cover(m, img, ay, zoom = 1, ax = .5, lift = 0, clip) { const s = Math.max(m.W / img.width, m.H / img.height) * zoom, w = img.width * s, h = img.height * s;
+  const x = (m.W - w) * ax, y = (m.H - h) * ay - lift * m.k / (1 + m.d / DREF);
+  if (clip) { m.g.save(); m.g.beginPath(); m.g.rect(x + clip[0] * w, y + clip[1] * h, (clip[2] - clip[0]) * w, (clip[3] - clip[1]) * h); m.g.clip(); }
+  m.g.drawImage(img, x, y, w, h); if (clip) m.g.restore(); }
 
 // Returns the layer stack for one panel, far to near.
 export function panelLayers(def, art) {
@@ -232,10 +235,15 @@ export function panelLayers(def, art) {
   const add = (d, ppu, fn, band) => { const m = layerCtx(w, h, d, ppu * q, band); fn(m); L.push({ d, canvas: m.c, plane: m.plane, blur: m.k * .2 }); };
   const sd = def.seed || 1;
   if (art && art.story) { add(.6, 110, m => coverPanel(m, art.story, art.poi)); return L; }   // one composed illustration
-  if (art && art.far) {     // painted artwork: a far backdrop and a near cut-out with the ground
-    add(9, 70, m => cover(m, art.far, .5));
+  if (art && (art.far || art.near)) {     // painted artwork: a far backdrop and a near cut-out with the ground (a near that fills the frame needs no far)
+    if (art.far) add(9, 70, m => cover(m, art.far, .5)); else add(9, 20, m => { m.g.fillStyle = '#0b0d22'; m.g.fillRect(0, 0, m.W, m.H); });
     if (art.mid) add(4, 90, m => cover(m, keyGreen(art.mid), 1));
-    if (art.near) add(.5, 110, m => cover(m, keyGreen(art.near), 1, 1.08, 0));   // nudged so the image's corner mark falls outside the frame
+    if (art.near) { const near = keyGreen(art.near), z = art.zoom || 1.08, up = art.lift || 0;
+      for (const [sx, sy, dx, dy, w, h] of art.patch || []) { const W = near.width, H = near.height;   // copy a clean bit of the picture over a blemish (the image tool's corner mark)
+        near.getContext('2d').drawImage(near, sx * W, sy * H, w * W, h * H, dx * W, dy * H, w * W, h * H); }
+      for (const r of art.erase || []) near.getContext('2d').clearRect(r[0] * near.width, r[1] * near.height, (r[2] - r[0]) * near.width, (r[3] - r[1]) * near.height);   // parts of the picture to leave out
+      add(.5, 110, m => cover(m, near, 1, z, 0, up));   // pinned bottom-left, so the image's corner mark falls outside the frame
+      for (const r of art.over || []) { add(.5, 110, m => cover(m, near, 1, z, 0, up, r)); L[L.length - 1].over = true; } }   // parts of the picture that stand in front of the characters (a counter, a parked car)
     return L;
   }
   switch (def.scene) {
