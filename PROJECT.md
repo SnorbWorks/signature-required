@@ -68,6 +68,10 @@ Not in this repo: the full written script `Signature_Required_Issue_001_Revised_
 - Epic comic-book camera angles: low angles, strong foreshortening, tilted frames.
 - Present-day city: brick blocks, fire escapes, water towers, ordinary cars and shop signs. Nothing futuristic.
 
+**Milo's age (corrected 2026-11-25):** he is 16 in the prologue and 17 tonight, and must look it. His pose sheets (`art/hero.png`, `art/hero_run.png`) are the authority on his face: attach both to every chat and say "16-year-old boy, smooth young face, no wrinkles, no forehead lines, no stubble, no heavy jaw". Words like "angular", "gritted teeth" and "strained" make the model draw a grown man. Seen from above or behind, say outright that no face is visible.
+
+**Self-running action frames (wanted 2026-11-25: more action that plays by itself, like the men from the van):** the picture is painted with nobody in it and the game moves the figure through it. Draw the story picture normally, then in a new chat attach it and ask for the same image with the person removed ("keep absolutely everything else identical"); this worked first time for all three of P0.7a-c. Save the empty one as `art/bg_<frame>.png`, list it as the frame's `story`, and script the movement with `runThrough(frame, who, points)` in `src/main.js` (each point: across, down, size, seconds, and optionally a jump height, `'slip'` or `'word:TEXT'`). `?page=P2&frame=P0.6` starts at the first of them.
+
 **Story frame pictures:**
 
 - Attach the style reference and `art/hero.png` at the start of a chat. For Tommy and Slim attach `art/thug.png` and `art/goon.png`.
@@ -108,6 +112,7 @@ A request to edit a finished picture ("make the door taller, cut a gap here") wo
 ## What is done
 
 - 13 story frame pictures: 1.1–1.5, 2.2, 2.5–2.8, 3.1, 3.3, 3.5 (1.1, 3.1 and 3.3 were redrawn on 2026-11-20).
+- Added 2026-11-25: P0.6, P0.7d, R.1 as story pictures; P0.7a–c as self-running frames (the versions with Milo drawn in are kept as `sr_P0_7a/b/c.png`); `sr_R_3_won.png` is drawn but not shown yet, because the art list cannot hold a picture per version of a frame.
 - 10 character sheets: Milo, Tommy, Slim, the two package-tax thugs, the two corner thugs, the Anchor doorman, the shopkeeper, Gage. Milo, Tommy and Slim also have walk cycles.
 - 2 freeze-frames (1.6, 4.1).
 - Backgrounds for 9 playable frames: the first pier fights (4.1, 4.3, 4.4) and, made to scale on 2026-11-23, the whole opening: rooftops P0.2 (with a dusk skyline), shop P0.3, loading platform P0.4, alley P0.5, Harlow Street R.2, the Anchor's back lot R.5.
