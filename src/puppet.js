@@ -21,6 +21,7 @@ export const STYLES = {
   corner1: { skin: '#c99672', top: '#6a3f8f', topSh: '#492a64', legs: '#2c2c36', legsSh: '#1e1e26', shoe: '#3a2c22', hand: '#c99672', hair: 'beanie', bulk: 56 },
   corner2: { skin: '#e0b08c', top: '#4a6f9c', topSh: '#334d6e', legs: '#30303a', legsSh: '#212129', shoe: '#c9302c', hand: '#e0b08c', hair: 'cap', bulk: 44 },
   brick: { skin: '#c08a68', top: '#1c1c22', topSh: '#101015', legs: '#26262e', legsSh: '#18181f', shoe: '#15151a', hand: '#c08a68', hair: 'beanie', bulk: 70 },
+  clerk: { skin: '#e0b592', top: '#e8e4d8', topSh: '#b9b4a6', legs: '#55565e', legsSh: '#3c3d44', shoe: '#4a3324', hand: '#e0b592', hair: 'cap', bulk: 46 },
   keeper: { skin: '#d9a982', top: '#3e8f8a', topSh: '#2a6460', legs: '#3a3327', legsSh: '#28231b', shoe: '#2a2018', hand: '#d9a982', hair: 'cap', bulk: 52 },
   gage: { skin: '#c98f6d', top: '#2f3f4f', topSh: '#1f2a36', legs: '#22222c', legsSh: '#16161d',
           shoe: '#2a2018', hand: '#c98f6d', hair: 'hat', hat: '#e8e2d0', bulk: 64 },
