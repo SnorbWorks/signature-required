@@ -46,12 +46,12 @@ const GAME = {
   '2.3': { scene: 'neon', seed: 23, plats: [[-4, 3.6, -.3, 'roof'], [4.85, 7.7, -.3, 'roof'], [9.2, 11.4, -.3, 'roof'], [12.8, 30, -.3, 'roof']] },
   '2.4': { plats: [FLOOR] },
   '3.2': { seed: 32 },
-  '3.4': { scene: 'neon', seed: 34, plats: [G, [1.5, 2.8, 1.4, 'crate', false], [2.9, 5.3, 2.5, 'crate', false], [5.5, 7.3, 1.4, 'crate', false], [8.4, 13.0, 2.7, 'crate', false], [13.1, 14.4, 1.7, 'crate', false],
-    [15.5, 16.8, 1.45, 'crate', false], [17.0, 19.3, 2.5, 'crate', false], [19.6, 21.3, 1.4, 'crate', false], [22.6, 26.6, 2.6, 'crate', false], [26.7, 28.2, 1.6, 'crate', false]] },   // measured from the painted jam (art/bg_3_4c.png): boot, roof and bonnet of each vehicle
+  '3.4': { scene: 'neon', seed: 34, plats: [[1.8, 9.1, .15, null, false], [3.4, 6.7, 1.12, null, true, .15], [10.5, 17.8, .25, null, false], [10.5, 15.4, 1.42, null, true, .25],
+    [19.1, 26.3, .18, null, false], [20.5, 24.4, 1.12, null, true, .18], [27.7, 34, 1.65, null, false]] },
   '3.6': { scene: 'alley', plats: [G, [4.6, 5.3, 2.0, 'crate'], [7.0, 10.2, 2.2, 'crate']] },   // measured from the painted fence and dumpster
   '4.1': { scene: 'alley' }, '4.3': { scene: 'dock' }, '4.4': { scene: 'dock' },
   '5.2': { scene: 'yard', seed: 31, floor: 1.25 },
-  '5.3': { scene: 'yard', seed: 33, floor: 1.25, plats: [G, [4.6, 6.5, 1.5, 'crate'], [9.6, 11.4, 1.5, 'crate']] },
+  '5.3': { scene: 'yard', seed: 33, floor: 1.25, plats: [[-60, 100, -.27, null, false], [4.6, 6.5, 1.5, 'crate'], [9.6, 11.4, 1.5, 'crate']] },
   '5.7': { scene: 'yard', seed: 37, plats: [[-6, 5.5, .6, 'container'], [5.5, 11, 1.8, 'container'], [11, 16.5, .9, 'container'], [17.9, 32, 1.4, 'container']] },
   '5.8': { scene: 'yard', seed: 38, plats: [[-6, 3.6, 1.4, 'container'], [5.0, 8.4, 2.0, 'container'], [10.0, 14, 2.6, 'container']] },
   '6.1': { scene: 'crane', seed: 41, track: 'y', keepBlocks: true, deck: 'catwalk', plats: [FLOOR, ...landings] },
@@ -667,7 +667,7 @@ function things(dt) {
     const inside = control && hero.panel === spot.p && Math.hypot(hero.x - sx, hero.wy + 1.7 - sy) < spot.r;
     if (spot.heat < 0) spot.heat += dt; else if (inside) spot.heat += dt; else spot.heat = Math.max(0, spot.heat - dt);
     if (spot.heat > .45) { spot.heat = -2.2; burst('SPOTTED!', hero.x, hero.wy + 4.2, .7, 1); dropCrate(spot.p, hero.x + hero.vx * .45, hero.y + 9, 'crate'); } }
-  if (fork && fork.vx) { const f = fork; f.x += f.vx * dt; f.mesh.visible = true; f.mesh.position.set(f.x, f.p.y0 + GROUND + 2.05, ZACT + .02); f.mesh.scale.x = f.vx < 0 ? 1 : -1;
+  if (fork && fork.vx) { const f = fork; f.x += f.vx * dt; f.mesh.visible = true; f.mesh.position.set(f.x, f.p.y0 + GROUND + 1.78, ZACT + .02); f.mesh.scale.x = f.vx < 0 ? 1 : -1;
     if (hero.panel === f.p && hero.inv <= 0 && hero.state !== 'down' && Math.abs(hero.x - f.x) < 1.9 && hero.y < 1.2) { hurtHero(Math.sign(f.vx), 'WHAM!'); hero.vy = 7; hero.vx = Math.sign(f.vx) * 7; }
     for (const e of chars) if (e !== hero && e.panel === f.p && e.shown && e.state === 'down' && Math.abs(e.x - f.x) < 2) { e.x = f.x + Math.sign(f.vx) * 2; if (e.x < f.p.x0 - 1.5 || e.x > f.p.x1 + 1.5) e.shown = false; } }
 }
@@ -889,10 +889,10 @@ async function page2() {
 
 async function page3() {
   await storyFrame('3.1'); await crossing(P['3.2']); await storyFrame('3.3');
-  const b = P['3.4'], c = P['3.6']; enterPanel(b); await heroEnters(b, 1.6);
-  startAction('The far lanes are jammed: go over the top');
+  const b = P['3.4'], c = P['3.6']; enterPanel(b); spawn(hero, b, 2.6, { y: .15 }); hero.face = 1;
+  startAction('Roof to roof: SPACE to jump from car to car, and do not fall between them');
   wait(1.2).then(() => shout(hero, 'Quicker than waiting\nfor the light.', 2, 'thought'));
-  await until(() => hero.x > b.x1 - 2.8 && hero.y > 2 && hero.grounded && !hero.busy);
+  await until(() => hero.x > b.x1 - 1.1 && hero.y > 1.4 && hero.grounded && !hero.busy);
   await leapOff(b); await storyFrame('3.5');
   // the back alleys and the bag-snatcher
   enterPanel(c); await heroEnters(c, 2.2);
