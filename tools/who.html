@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><title>Who is where</title>
+<style>body{background:#222;color:#eee;font:11px sans-serif;margin:6px;display:flex;flex-wrap:wrap;gap:6px}div.f{position:relative;height:330px;overflow:hidden}img{display:block;height:330px;object-fit:cover}
+span{position:absolute;left:2px;top:2px;background:#000c;padding:1px 4px;font-weight:bold;color:#ff0;z-index:3}i{position:absolute;background:#0ff9}b{position:absolute;color:#0ff;font-size:9px;text-shadow:0 0 2px #000,0 0 2px #000}</style>
+<script>
+// every story picture cropped the way its frame crops it, with a grid in tenths: for reading off where each speaker's head is. ?from=N&n=M pages through them.
+const q = new URLSearchParams(location.search), from = +q.get('from') || 0, n = +q.get('n') || 6;
+fetch('who_list.json').then(r => r.json()).then(L => { let h = '';
+  for (const [id, file, r, x, y] of L.slice(from, from + n)) { const w = 330 * r; let g = '';
+    for (let k = 1; k < 10; k++) g += `<i style="left:${k * 10}%;top:0;width:1px;height:100%"></i><i style="top:${k * 10}%;left:0;height:1px;width:100%"></i><b style="left:${k * 10}%;top:50%">${k}</b><b style="top:${k * 10}%;left:50%">${k}</b>`;
+    h += `<div class="f" style="width:${w}px"><img src="../art/${file}" style="width:${w}px;object-position:${x * 100}% ${y * 100}%">${g}<span>${id}</span></div>`; }
+  document.body.innerHTML = h; });
+</script>

@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><title>Story picture crops</title>
+<style>body{background:#222;color:#eee;font:12px sans-serif;margin:8px;display:flex;flex-wrap:wrap;gap:8px}div{position:relative}img{display:block;height:170px;object-fit:cover}span{position:absolute;left:2px;top:2px;background:#000a;padding:1px 4px}</style>
+<script>
+// name, frame shape (width / height), poi x, poi y: shows each story picture cropped the way its frame will crop it
+const L = location.hash ? JSON.parse(decodeURIComponent(location.hash.slice(1))) : [];
+for (const [n, r, x, y] of L) document.write(`<div><img src="../art/sr_${n}.png" style="width:${170 * r}px;object-position:${x * 100}% ${y * 100}%"><span>${n}</span></div>`);
+</script>

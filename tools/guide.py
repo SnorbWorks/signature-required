@@ -53,6 +53,68 @@ SPECS = {
     'R.5': dict(w=24.8, h=8.8, ratio='21:9', floor=True, men=[[2.6, 0]], back=[BRICK], blocks=[],
                 paint=[[.4, 3.6, .3, 2.6, TEAL], [9.9, 11.1, 3.6, 5.6, YELLOW], [21.2, 23.1, .3, 4.0, DOOR], [21.9, 22.4, 4.4, 4.8, WHITE],
                        [4.6, 6.4, 0, 1, BROWN], [7, 9.6, 0, 1.9, BROWN], [11.4, 14.4, 0, 1.9, BROWN], [16.2, 18.6, 0, 1.9, BROWN]]),
+    # page 1 rooftops at night: four roofs at different heights, three gaps (green = sky, cut out)
+    '1.6': dict(w=21.4, h=10.4, ratio='16:9', floor=False, men=[[2.6, 2.6]],
+                blocks=[[-6, 4.6, 2.6, 'solid'], [6.1, 10.1, 1.8, 'solid'], [12.1, 15.6, 2.2, 'solid'], [18.1, 30, 1.2, 'solid']],
+                paint=[[-.4, 1.7, 2.6, 6.6, BROWN], [9.1, 9.8, 1.8, 2.6, LGREY], [12.5, 12.7, 2.2, 5.0, ORANGE], [15.0, 15.2, 2.2, 5.0, ORANGE], [12.5, 15.2, 4.7, 4.85, ORANGE], [19.6, 20.5, 1.2, 2.2, LGREY]]),
+    # the big jump, seen low: two roof edges, the top of a sign tower in the gap between them
+    '1.7': dict(w=17.6, h=4.6, ratio='16:9', floor=False, men=[[2.6, -.75]],
+                blocks=[[-6, 5.6, -.75, 'solid'], [8.2, 9.6, -.2, 'solid'], [12.6, 30, -.75, 'solid']],
+                paint=[[.4, 1.2, -.75, .3, LGREY], [14.6, 16.4, -.75, 2.9, BROWN], [13.3, 13.45, -.75, 2.6, ORANGE]]),
+    # the fire escape: a brick wall right across, landings as thin decks, the lit window at the top
+    '2.1': dict(w=9.8, h=24.6, ratio='9:16', floor=True, men=[[2.4, 0]], back=[[-9, 99, -9, 40, DKWALL]],
+                blocks=[[4.5, 9.2, 1.55, 'deck'], [.6, 5.3, 3.1, 'deck'], [6.2, 9.2, 4.65, 'deck'], [.6, 5.3, 6.2, 'deck'], [4.5, 9.2, 7.75, 'deck'], [.6, 3.6, 9.3, 'deck'],
+                        [4.5, 9.2, 10.85, 'deck'], [.6, 5.3, 12.4, 'deck'], [6.2, 9.2, 13.95, 'deck'], [.6, 5.3, 15.5, 'deck'], [4.5, 9.2, 17.05, 'deck'], [.6, 9.2, 18.6, 'deck']],
+                paint=[[6.4, 8.2, 19.4, 22.2, YELLOW], [1.2, 2.8, 4.2, 5.8, CYAN], [6.6, 8.2, 8.8, 10.4, CYAN], [1.2, 2.8, 13.4, 15.0, CYAN], [1.4, 3.3, .3, 4.5, DOOR]]),
+    # the fourth-floor ledge: wall right across, the ledge in four pieces
+    '2.3': dict(w=19.2, h=6.2, ratio='16:9', floor=False, men=[[1.6, -.3]], back=[[-9, 99, -9, 40, DKWALL]],
+                blocks=[[-4, 3.4, -.3, 'deck'], [4.8, 8.2, -.3, 'deck'], [9.9, 12.6, -.3, 'deck'], [14.2, 30, -.3, 'deck']],
+                paint=[[.4, 2.2, .7, 3.6, CYAN], [5.6, 7.2, 1.4, 2.5, LGREY], [10.3, 12.1, .7, 3.6, CYAN], [16.0, 18.0, .5, 3.8, YELLOW]]),
+    # the clerk's back office: same build as the shop (wall line .9 above the floor line)
+    '2.4': dict(w=17.4, h=8.4, ratio='16:9', floor=True, edge=.9, men=[[5.4, 0]],
+                back=[[-9, 99, .9, 6.4, WALL], [-9, 99, 6.4, 20, CEIL]],
+                paint=[[.8, 2.2, .9, 4.4, LGREY], [2.4, 3.8, .9, 4.4, LGREY], [9.4, 13.2, .9, 2.7, BROWN], [12.2, 12.8, 2.7, 3.7, YELLOW], [14.6, 16.5, .9, 5.1, DOOR]]),
+    # over the traffic jam, seen low: vehicle bodies as a row of platforms running down out of the picture
+    '3.4': dict(w=28.2, h=7.8, ratio='16:9', floor=True, men=[[1.2, 0]],
+                blocks=[[2.6, 5.4, 1.3, 'box'], [6.4, 9.2, 1.3, 'box'], [10.3, 13.7, 1.0, 'box'], [14.9, 19.5, 2.5, 'box'], [20.7, 27.4, 2.9, 'box']]),
+    # back alleys: a wall right across, a fence and a dumpster to get over
+    '3.6': dict(w=26.2, h=8.2, ratio='16:9', floor=True, men=[[2.4, 0]], back=[BRICK], blocks=[],
+                paint=[[4.6, 5.1, 0, 1.5, BROWN], [8.2, 10.2, 0, 1.3, TEAL], [12.0, 13.9, .3, 4.5, DOOR], [15.6, 16.1, 2.6, 7.4, ORANGE], [14.6, 17.4, 5.8, 6.1, ORANGE],
+                       [19.0, 20.0, .3, 1.3, LGREY], [1.0, 2.6, 3.4, 5.6, YELLOW], [21.6, 23.2, 3.4, 5.6, YELLOW], [24.2, 30, .3, 5.2, LGREY]]),
+    # the container yard: a wall of stacked containers right across
+    '5.2': dict(w=14.2, h=10.8, ratio='16:9', floor=True, men=[[3, 0]], back=[[-9, 99, .3, 30, (40, 90, 140)]], blocks=[],
+                paint=[[6.6, 7.6, 8.2, 8.8, YELLOW]]),
+    '5.3': dict(w=14.8, h=8.8, ratio='16:9', floor=True, men=[[2, 0]], back=[[-9, 99, .3, 30, (40, 90, 140)]], blocks=[],
+                paint=[[4.4, 6.4, 0, 1.6, BROWN], [9.4, 11.4, 0, 1.6, BROWN]]),
+    # along the container tops
+    '5.7': dict(w=25.8, h=7.8, ratio='16:9', floor=False, men=[[2, .6]],
+                blocks=[[-6, 5.5, .6, 'solid'], [5.5, 11, 1.8, 'solid'], [11, 16.5, .9, 'solid'], [17.9, 32, 1.4, 'solid']]),
+    '5.8': dict(w=13.2, h=7.8, ratio='16:9', floor=False, men=[[1.6, 1.4]],
+                blocks=[[-6, 3.6, 1.4, 'solid'], [5.0, 8.4, 2.0, 'solid'], [10.0, 14, 2.6, 'solid']]),
+    # the crane: boom sections, the gantry walkway with a piece missing, the lower catwalk
+    '6.3': dict(w=20.2, h=6.4, ratio='16:9', floor=False, men=[[2, .8]],
+                blocks=[[-4, 4.6, .8, 'deck'], [6.2, 10.4, .8, 'deck'], [12, 15.6, .8, 'deck'], [17.2, 30, .8, 'deck']]),
+    '6.5': dict(w=20.2, h=8.4, ratio='16:9', floor=False, men=[[2, 0]],
+                blocks=[[-60, 6, 0, 'deck'], [8.6, 100, 0, 'deck']]),
+    '6.6': dict(w=19.4, h=8.6, ratio='16:9', floor=False, men=[[2, 0]], blocks=[[-60, 100, 0, 'deck']]),
+    # the end of the pier
+    # the climbs, wall only: the landings are drawn by the game on top (keepBlocks), so the painting only has to get the scale right
+    '2.1b': dict(w=9.8, h=24.6, ratio='9:16', floor=True, men=[[2.4, 0]], back=[[-9, 99, -9, 40, DKWALL]], blocks=[],
+                 paint=[[6.4, 8.2, 19.4, 22.2, YELLOW], [1.2, 2.8, 4.2, 6.6, CYAN], [6.6, 8.2, 8.8, 11.2, CYAN], [1.2, 2.8, 13.4, 15.8, CYAN], [6.6, 8.2, 2.2, 4.6, CYAN], [1.2, 2.8, 19.8, 22.2, CYAN], [1.4, 3.3, .3, 4.5, DOOR]]),
+    '6.1b': dict(w=9.8, h=24.6, ratio='9:16', floor=True, men=[[2.4, 0]], back=[[-9, 99, -9, 40, (40, 90, 140)]], blocks=[],
+                 paint=[[3.4, 6.4, 0, 40, YELLOW]]),
+    # the leap: the pier runs out a little past the middle, then open water
+    '7.6': dict(w=39.6, h=7.2, ratio='16:9', floor=False, men=[[6, 0]], blocks=[[-9, 22, 0, 'solid']],
+                paint=[[22, 99, -9, -.9, (40, 90, 140)], [10, 10.8, 0, .8, BROWN], [20.6, 21.4, 0, .8, BROWN]]),
+    # the dock run: the pier deck is the ground, sky cut out, three things to jump
+    '7.1': dict(w=22.8, h=7.4, ratio='16:9', floor=False, men=[[2, 0]], blocks=[[-9, 99, 0, 'solid']],
+                paint=[[6, 7, 0, .7, BROWN], [11, 12.2, 0, .9, BROWN], [16, 17, 0, .7, BROWN]]),
+    # the traffic jam, whole vehicles standing on the road: boot, roof and bonnet of each are the platforms
+    '3.4c': dict(w=28.2, h=7.8, ratio='16:9', floor=True, men=[[.6, 0]], blocks=[],
+                 paint=[[1.4, 2.7, .5, 1.7, YELLOW], [2.7, 5.5, .5, 2.7, YELLOW], [5.5, 7.4, .5, 1.7, YELLOW], [1.9, 2.9, 0, 1.0, EDGE], [5.6, 6.6, 0, 1.0, EDGE],
+                        [8.4, 11.2, .6, 1.9, RED], [11.2, 13.2, .6, 2.9, RED], [13.2, 14.6, .6, 2.0, RED], [9.0, 10.1, 0, 1.1, EDGE], [12.9, 14.0, 0, 1.1, EDGE],
+                        [15.6, 16.9, .5, 1.7, CYAN], [16.9, 19.7, .5, 2.7, CYAN], [19.7, 21.6, .5, 1.7, CYAN], [16.1, 17.1, 0, 1.0, EDGE], [19.8, 20.8, 0, 1.0, EDGE],
+                        [22.6, 27.2, .6, 2.9, WHITE], [27.2, 28.6, .6, 1.9, WHITE], [23.2, 24.3, 0, 1.1, EDGE], [26.6, 27.7, 0, 1.1, EDGE]]),
 }
 
 
