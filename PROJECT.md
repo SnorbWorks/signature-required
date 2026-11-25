@@ -142,3 +142,24 @@ Suggested order: story frames first (they change the feel most), then freeze-fra
 - Phone: on-screen BLOCK and DODGE buttons are untested by touch; hints still say "arrow keys".
 - The screen-edge blur is new and has only been checked on a desktop.
 - The README still describes an older, shorter version.
+
+## Story pictures and the yard maze (25 Nov 2026)
+- Story pictures are made in Google Flow (Nano Banana, 0 credits): attach `sr_3_1.png` as the art-style sample plus the character sheets, describe the panel, download at "1K Original size", then `tools/takemany.sh <name> ...` names the downloads in order. Wide frames use 16:9, squarish frames 1:1.
+- `tools/sheet.html` shows story pictures cropped to their frame shapes (list passed after the #).
+- A story frame can have one picture per ending: manifest `"variants": {"won": ..., "fled": ..., "robbed": ...}` (R.3, R.6); `swapStory` in main.js puts the right one up.
+- Frame 5.1 turns into an overhead container maze after its dialogue (`maze()` / `mazeTick()` in main.js, drawn by `mazeCanvas`). Layout comes from `mazeGrid(51)`: change the number for a different maze. Two yard men chase by shortest path; speeds are `v` in `maze()`.
+- Overhead frames (avenue 3.2, yard maze 5.1) use painted pieces listed under `"top"` in the manifest: `top_road.png` and `top_floor.png` are whole pictures; `top_cars.png` and `top_yard.png` are cut-out sheets on green. The cut rectangles come from `tools/topguides.py`, which also writes the layout guides the sheets were painted over. Delete an entry and the game falls back to its own drawing.
+- Climbs 2.1 and 6.1: the painting is only the wall / crane tower (`bg_2_1.png`, `bg_6_1.png`, guides `2.1b`, `6.1b`); the landings are drawn by the game on top (`keepBlocks`).
+- Pier leap 7.6: `bg_7_6.png`, shown with `lift: -4`; the pier ends at 20.6 units to match the painting.
+- `worker.png` is the dock worker sheet (same 8 poses as the others); `forklift.png` is the painted forklift (`"top": {"fork": ...}`).
+- Not painted: falling crates and flowerpots (game-drawn).
+
+## The 45-edit pass (25 Nov 2026)
+- Real props: the parcel (P0.3) and the case (2.4) sit in the scene and Milo picks them up; "GOT IT" / "CLICK" pop where the prop was. Positions come from `item` in art/manifest.json.
+- Mixed painted obstacles come from `dress` in the manifest (props.png); fire-escape landings and crane catwalks are painted (`deck` in the GAME table).
+- Balloons place themselves clear of faces and point at the speaker, using `who` head spots per story frame in the manifest (check with tools/who.html).
+- New characters and art: clerk, Gage jump pose, overhead running sprites (top_run.png) for the road crossing and the maze, wind gusts, the ship.
+- New ending: the Halcyon pulls away; jump in time and Milo lands on the stern, wait too long and he misses it (different last lines and end note).
+- Measuring view: add `&flat=1` to the address for a straight-on view with a numbered grid, used to line platforms up with the paintings.
+- Not yet watched in play: falling pots in 2.3, the third man in 2.6, the dock worker walking in at 3.6. No separate "missed the ship" picture for 7.8 yet.
+- Warning: never put a `//` note in the middle of a one-line function in main.js; it cuts off the rest of the line.
