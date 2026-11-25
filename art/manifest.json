@@ -465,7 +465,8 @@
   "3.4": {
    "far": "p1_far.png",
    "near": "bg_3_4c.png",
-   "zoom": 1.08
+   "zoom": 1.32,
+   "lift": -2.3
   },
   "5.3": {
    "near": "bg_5_3.png",
