@@ -163,3 +163,12 @@ Suggested order: story frames first (they change the feel most), then freeze-fra
 - Measuring view: add `&flat=1` to the address for a straight-on view with a numbered grid, used to line platforms up with the paintings.
 - Not yet watched in play: falling pots in 2.3, the third man in 2.6, the dock worker walking in at 3.6. No separate "missed the ship" picture for 7.8 yet.
 - Warning: never put a `//` note in the middle of a one-line function in main.js; it cuts off the rest of the line.
+
+## Walk sheets, wind-up, reinforcements (25 Nov 2026, later)
+
+- Every enemy kind now has a 4-pose walk sheet (`art/<kind>_walk.png`, made in Flow from the main sheet) wired in the manifest as `walk`, the same way thug/goon were.
+- Wind-up no longer uses the arm-in-the-air `wind` frame: `frameFor` shows `stance`, and `Char.tick` leans the body back for the wind-up, so the punch reads as rear back then hit.
+- `mob` = five spare characters (m1..m5). `joins(panel, char, side, delay, opts, line, men)` walks one in mid-fight; `leave(e)` runs him off. They clear out when the frame changes, at `endAction`, and at `diveAfter`.
+- `tough()` gives 0 (prologue), 1 (first deliveries), 2..5 (last job pages 1..7); `arm()` uses it to make enemies 4% faster and wind-ups 4% shorter per step.
+- Extras: R.2 one, R.5 one (unbeatable, from behind), 3.6 one, 4.3 one, 4.4 two, 5.2 two, 5.7 two, crane boss two, 7.1 two standing in the way of the dock run.
+- `?nomaze=1` skips the yard maze for testing.
