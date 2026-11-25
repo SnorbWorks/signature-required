@@ -46,8 +46,8 @@ const GAME = {
   '2.3': { scene: 'neon', seed: 23, plats: [[-4, 3.6, -.3, 'roof'], [4.85, 7.7, -.3, 'roof'], [9.2, 11.4, -.3, 'roof'], [12.8, 30, -.3, 'roof']] },
   '2.4': { plats: [FLOOR] },
   '3.2': { seed: 32 },
-  '3.4': { scene: 'neon', seed: 34, plats: [[1.8, 9.1, .15, null, false], [3.4, 6.7, 1.12, null, true, .15], [10.5, 17.8, .25, null, false], [10.5, 15.4, 1.42, null, true, .25],
-    [19.1, 26.3, .18, null, false], [20.5, 24.4, 1.12, null, true, .18], [27.7, 34, 1.65, null, false]] },
+  '3.4': { scene: 'neon', seed: 34, plats: [[1.5, 6.6, .05, null, false], [2.0, 4.3, .95, null, true, .05], [7.8, 14.0, .18, null, false], [7.8, 12.3, 1.1, null, true, .18],
+    [15.2, 21.3, .1, null, false], [16.5, 19.0, .85, null, true, .1], [22.7, 34, .28, null, false], [22.7, 26.9, 1.1, null, true, .28]] },
   '3.6': { scene: 'alley', plats: [G, [4.6, 5.3, 2.0, 'crate'], [7.0, 10.2, 2.2, 'crate']] },   // measured from the painted fence and dumpster
   '4.1': { scene: 'alley' }, '4.3': { scene: 'dock' }, '4.4': { scene: 'dock' },
   '5.2': { scene: 'yard', seed: 31, floor: 1.25 },
@@ -889,10 +889,10 @@ async function page2() {
 
 async function page3() {
   await storyFrame('3.1'); await crossing(P['3.2']); await storyFrame('3.3');
-  const b = P['3.4'], c = P['3.6']; enterPanel(b); spawn(hero, b, 2.6, { y: .15 }); hero.face = 1;
+  const b = P['3.4'], c = P['3.6']; enterPanel(b); spawn(hero, b, 3.1, { y: .95 }); hero.face = 1;
   startAction('Roof to roof: SPACE to jump from car to car, and do not fall between them');
   wait(1.2).then(() => shout(hero, 'Quicker than waiting\nfor the light.', 2, 'thought'));
-  await until(() => hero.x > b.x1 - 1.1 && hero.y > 1.4 && hero.grounded && !hero.busy);
+  await until(() => hero.x > b.x1 - 2.4 && hero.y > .9 && hero.grounded && !hero.busy);
   await leapOff(b); await storyFrame('3.5');
   // the back alleys and the bag-snatcher
   enterPanel(c); await heroEnters(c, 2.2);
