@@ -178,7 +178,7 @@ export function frameFor(c) {
     case 'jump': return 'jump';
     case 'block': case 'dodge': return 'stance';
     case 'punch': return c.st > .06 && c.st < .25 ? 'punch' : 'stance';
-    case 'wind': return 'wind';
+    case 'wind': return 'stance';
     case 'strike': return 'punch';
     case 'hurt': return 'hurt';
     case 'down': return c.grounded ? 'down' : 'hurt';

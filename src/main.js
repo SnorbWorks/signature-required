@@ -85,7 +85,7 @@ const layerMat = (map, mapB, ref) => new THREE.ShaderMaterial({
 const clipMat = (o, ref) => new THREE.MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: ref, stencilFunc: THREE.EqualStencilFunc, ...o });
 
 let panels = [], P = {}, rainMats = [], L, manifest = {}, pageNo = 0, frameId = '';
-let hero, thug, goon, w1, w2, w3, gage, tax1, tax2, cor1, cor2, brick, keeper, clerk, chars = [], foes = [], onDown = null;
+let hero, thug, goon, w1, w2, w3, gage, tax1, tax2, cor1, cor2, brick, keeper, clerk, m1, m2, m3, m4, m5, mob = [], chars = [], foes = [], onDown = null;
 const imgCache = {};
 const put = m => { scene.add(m); pageObjs.push(m); return m; };
 
@@ -214,7 +214,7 @@ class Char {
     if (this.pup.draw(this.pose, { air: !this.grounded || !!this.hop, hurt: this.state === 'hurt' || this.state === 'down', frame: fr })) this.tex.needsUpdate = true;
     this.mesh.visible = !(this.inv > 0 && Math.floor(t * 14) % 2 === 0);
     this.mesh.position.set(this.wx, this.wy + this.size * (BASE - CH / 2) / PPU, ZACT + this.zlift);
-    this.mesh.scale.set(this.face * this.size, this.size, 1); this.mat.opacity = this.alpha; this.mesh.rotation.z = -this.spin * this.face;
+    this.mesh.scale.set(this.face * this.size, this.size, 1); this.mat.opacity = this.alpha; const rear = this.state === 'wind' ? Math.min(1, this.st / .14) : 0; this.mesh.rotation.z = -this.spin * this.face + rear * .2 * this.face; this.mesh.position.x -= rear * .22 * this.face;
     const f = this.hop ? 1 : this.panel.focus; this.mat.color.setScalar(this.tint != null ? this.tint : .84 + .16 * f);
   }
 }
@@ -423,11 +423,21 @@ function playEnemy(e, dt) {
     case 'hurt': if (e.st > .32) { e.set('idle'); e.wait = .3 + Math.random() * .5; } break;
   }
 }
-function arm(e, o = {}) { Object.assign(e, { reach: 2.05, windT: .42, speed: 2.5, heavy: false }, o); e.free = false; e.ai = true; e.relaxed = false; e.ghost = false; e.wait = o.wait || 1.1; if (!foes.includes(e)) foes.push(e); }
+function tough() { const m = /^(\d)/.exec(frameId); return frameId.startsWith('P0') ? 0 : frameId[0] === 'R' ? 1 : m ? 2 + Math.floor((+m[1] - 1) / 2) : 2; }
+function joins(p, c, side, delay, o = {}, line, men) { const id = p.id;
+  wait(delay).then(async () => { if (frameId !== id || !control || c.shown) return;
+    spawn(c, p, side > 0 ? p.w + 1.4 : -1.4, { face: -side, hp: o.hp || 2, y: o.y }); c.ghost = true; c.guard = o.guard || null; c.knockTo = null; c.snatch = false; if (line) shout(c, line, 1.7);
+    await walkTo(c, side > 0 ? p.x1 - 2.6 : p.x0 + 2.6, 3.4);
+    if (frameId !== id || !control) { c.free = true; await walkTo(c, side > 0 ? p.x1 + 2.5 : p.x0 - 2.5, 4.5); c.shown = false; return; }
+    arm(c, o); if (men) men.push(c); until(() => frameId !== id).then(() => { if (c.shown && c.panel === p) leave(c); }); }); return c; }
+function leave(e) { if (e.state === 'down') { e.shown = false; return; } const q = e.panel; e.ai = false; e.free = true; e.ghost = true; foes = foes.filter(f => f !== e); walkTo(e, e.x < q.cx ? q.x0 - 2.5 : q.x1 + 2.5, 4.5).then(() => { if (e.panel === q) e.shown = false; }); }
+function arm(e, o = {}) { Object.assign(e, { reach: 2.05, windT: .42, speed: 2.5, heavy: false }, o); { const k = tough(); e.speed *= 1 + .04 * k; e.windT = Math.max(.26, e.windT * (1 - .04 * k)); } e.free = false; e.ai = true; e.relaxed = false; e.ghost = false; e.wait = o.wait || 1.1; if (!foes.includes(e)) foes.push(e); }
 function startAction(text) { hudOn = true; hud(); control = true; hero.free = false; hero.relaxed = false; hint(text); }
-async function endAction() { control = false; hudOn = false; hud(); hint(''); hero.vx = 0; hero.relaxed = true; await until(() => hero.grounded && !hero.busy); hero.set('idle'); foes = []; }
+async function endAction() { control = false; hudOn = false; hud(); hint(''); hero.vx = 0; hero.relaxed = true;
+  for (const e of mob) if (e.shown && e.state !== 'down' && e.panel) leave(e);
+  await until(() => hero.grounded && !hero.busy); hero.set('idle'); foes = []; }
 async function heroEnters(p, to = 2.4, y = 0) { spawn(hero, p, -1.4, { y, relaxed: true }); await walkTo(hero, p.x0 + to, 3.2); hero.face = 1; }
-async function diveAfter(p, x, text) { control = false; hero.vx = 0; await until(() => hero.grounded && !hero.busy); hero.set('idle'); hint(text); pressed.jump = false; let t = 0;
+async function diveAfter(p, x, text) { control = false; hero.vx = 0; for (const e of mob) if (e.shown && e.panel) leave(e); await until(() => hero.grounded && !hero.busy); hero.set('idle'); hint(text); pressed.jump = false; let t = 0;
   await until(dt => pressed.jump || (AUTO && (t += dt) > .6)); hint(''); await hop(hero, p, x, { h: 2.8, dur: .7 }); hero.face = 1; }
 
 // things in the frames that are not people
@@ -768,7 +778,8 @@ async function route() {
   setClock(12, 34, 21, 40);
   arm(cor1, { speed: 2.6, wait: .8 }); arm(cor2, { speed: 2.2, wait: 1.6 });
   startAction('Your call: fight them (J  K  L), or up the crate and over the scaffolding');
-  const one = await encounter(a, [cor1, cor2]);
+  const tollMen = [cor1, cor2]; joins(a, m1, 1, 8, { hp: 2, speed: 2.4, wait: 1 }, 'Toll just\nwent up.', tollMen);
+  const one = await encounter(a, tollMen);
   await endAction(); clock.on = false;
   if (one === 'fled') { hero.free = true; await walkTo(hero, a.x1 + 1.6, 4.6); }
   hero.shown = false; cor1.shown = cor2.shown = false;
@@ -788,6 +799,7 @@ async function route() {
   setClock(10, 30, 22, 25);
   arm(brick, { reach: 2.6, windT: .5, speed: 2.1, heavy: true, wait: .9 }); arm(tax1, { speed: 2.4, wait: 1.8 }); arm(tax2, { speed: 2.2, wait: 2.6 });
   startAction("You can't beat him  •  over the crates to the back door  ▶");
+  joins(b, m2, -1, 6, { hp: 9, speed: 2.3, wait: 1.2, guard: () => true }, 'Nowhere to go,\nkid.');
   const two = await encounter(b, [brick, tax1, tax2]);
   await endAction(); clock.on = false;
   if (two === 'fled') { hero.free = true; await walkTo(hero, b.x1 + 1.6, 4.6); }
@@ -899,7 +911,7 @@ async function page3() {
   startAction('Vault the fences  ▶');
   await until(() => hero.x > c.x0 + 9.5);
   spawn(w3, c, c.w + 1.4, { face: -1, hp: 3 }); shout(w3, "Nice bag.\nI'll take it.", 1.8); await walkTo(w3, c.x1 - 3.2, 3.2);   // he comes in from the street end of the alley
-  arm(w3, { speed: 2.8, wait: .7 }); w3.snatch = true;
+  arm(w3, { speed: 2.8, wait: .7 }); w3.snatch = true; joins(c, m1, -1, 3.5, { hp: 2, speed: 2.6, wait: .9 }, 'Going somewhere?');
   hint('If he lands a hit he grabs the case and runs');
   wait(1.3).then(() => shout(hero, "It's not for you.", 1.4));
   await until(() => (w3.state === 'down' && !w3.hasCase) || (w3.hasCase && w3.x > c.x1 + 1));
@@ -929,11 +941,11 @@ async function page4() {
   enterPanel(b);
   spawn(thug, b, 11.5, { face: -1, hp: 4 }); thug.knockTo = { p: c, dir: 0, word: 'KRASH!' };
   await heroEnters(b, 2.4); await wait(.3);
-  arm(thug); startAction('J punch  •  K block  •  L dodge  •  Space jump');
+  arm(thug); startAction('J punch  •  K block  •  L dodge  •  Space jump'); joins(b, m4, -1, 3, { hp: 2, speed: 2.5, wait: 1 }, 'Need a hand?');
   await until(() => thug.flown && !thug.hop); thug.flown = false;
   await diveAfter(c, clamp(thug.x - 4.5, c.x0 + 5, c.x1 - 3), 'Space: jump down after him');
   // round two
-  thug.set('idle'); thug.hp = 2; arm(thug, { wait: .9 }); startAction('');
+  thug.set('idle'); thug.hp = 2; arm(thug, { wait: .9 }); startAction(''); joins(c, m5, 1, 3, { hp: 2, speed: 2.6, wait: .9 }, 'Get the case!'); joins(c, m4, 1, 8, { hp: 2, speed: 2.6, wait: .9 });
   spawn(goon, c, -1.4, { hp: 4 }); goon.ghost = true; goon.guard = () => thug.state !== 'down'; goon.knockTo = { p: d, dir: -1, fx: d.cx, y: d.h * .3, hide: true };   // Slim comes in behind Milo
   wait(2).then(async () => { await walkTo(goon, c.x0 + 2.3, 3); shout(goon, "Hey! That's\nmy brother!", 1.7); arm(goon, { wait: 1.2 }); wait(1.8).then(() => shout(hero, 'I gathered that.', 1.3)); });
   await until(() => goon.flown && !goon.hop);
@@ -948,7 +960,7 @@ async function page5() {
 }
 async function page5a() {
   await storyFrame('5.1');
-  await maze(P['5.1']);
+  if (!QS.has('nomaze')) await maze(P['5.1']);   // ?nomaze: test shortcut
   const a = P['5.2'], b = P['5.3'];
   enterPanel(a);
   spawn(w1, a, a.w - 3.4, { face: -1, hp: 3 }); spawn(w2, a, -1.4, { hp: 3, shown: false });
@@ -956,7 +968,7 @@ async function page5a() {
   await heroEnters(a, 4.6);
   await say(w1, "Yard's closed,\ncourier."); await say(hero, "I'm looking for someone."); shout(w1, 'Everybody is.', 1.5); await wait(.9);
   arm(w1, { reach: 2.7, windT: .55, speed: 2.2, heavy: true }); wait(2.2).then(async () => { w2.shown = true; w2.ghost = true; await walkTo(w2, a.x0 + 1.6, 3); arm(w2, { reach: 2.7, windT: .55, speed: 2.0, heavy: true }); });   // the second one boxes him in from behind
-  startAction('Pipes go through a block: dodge (L), then hit');
+  startAction('Pipes go through a block: dodge (L), then hit'); joins(a, m3, 1, 4, { hp: 2, reach: 2.7, windT: .5, speed: 2.2, heavy: true }, "Yard's closed!"); joins(a, m1, -1, 9, { hp: 2, speed: 2.7, wait: .8 });
   await until(() => w2.flown && !w2.hop);
   await diveAfter(b, b.x0 + 8, 'Space: jump down after him');
   // the forklift
@@ -975,7 +987,7 @@ async function page5b() {   // over the top, then the searchlight
   spawn(w3, c, 22.5, { y: 1.4, face: -1, hp: 3 });
   await heroEnters(c, 2.2, .6);
   arm(w3, { reach: 2.7, windT: .55, speed: 2.0 });
-  startAction('Run the container tops  ▶');
+  startAction('Run the container tops  ▶'); joins(c, m3, 1, 4, { hp: 2, y: 1.4, reach: 2.7, windT: .5, speed: 2.1, heavy: true }, 'Up here!'); joins(c, m5, 1, 9, { hp: 2, y: 1.4, speed: 2.7, wait: .8 });
   wait(2).then(() => radio('Six minutes, Milo.'));
   await until(() => hero.x > c.x1 - 1.5 && hero.grounded && !hero.busy);
   await endAction(); enterPanel(d); await hop(hero, d, d.x0 + 1.6, { y: 1.4, h: 2, dur: .6 }); hero.face = 1;
@@ -1010,7 +1022,7 @@ async function page6() {
   await heroEnters(b, 2.6);
   await say(gage, "The last courier didn't\nlisten either."); await say(hero, '...'); shout(hero, 'What last courier?', 1.4); await wait(.5);
   arm(gage, { reach: 3.4, windT: .7, speed: 2.0, leaps: true, heavy: true });
-  startAction('No blocking the hook: dodge it (L), then hit  •  mind the gap');
+  startAction('No blocking the hook: dodge it (L), then hit  •  mind the gap'); joins(b, m3, -1, 5, { hp: 2, y: .8, leaps: true, reach: 2.7, windT: .5, speed: 2.2, heavy: true }, 'Boss!'); joins(b, m1, -1, 11, { hp: 2, y: .8, leaps: true, speed: 2.8, wait: .8 });
   await until(() => { if (gage.knockTo && !gage.hop && gage.y < -1) { gage.knockTo.x = clamp(gage.x, c.x0 + 2, c.x1 - 2); knock(gage); }   // down through the gap and into the frame below
     return gage.flown && !gage.hop; }); gage.flown = false; gage.leaps = false;
   await diveAfter(c, clamp(gage.x - 4.5, c.x0 + 2, c.x1 - 3), 'Space: jump down after him');
@@ -1025,7 +1037,8 @@ async function page6() {
 async function page7() {
   const a = P['7.1']; enterPanel(a); caption(a, '11:58 PM.');
   await heroEnters(a, 2);
-  startAction('RUN!  Jump the ropes'); hudOn = false; hud();
+  spawn(m4, a, 9.2, { face: -1, hp: 2 }); spawn(m5, a, 14.4, { face: -1, hp: 2 }); m4.guard = m5.guard = null; arm(m4, { speed: 2.4, wait: .5 }); arm(m5, { speed: 2.6, wait: .5 });
+  startAction('RUN!  Jump the ropes, and go through anyone in the way'); hud();
   radio('Ninety seconds.', 1.3); wait(1.5).then(() => shout(hero, 'I know!', 1)); wait(2.8).then(() => radio("Don't miss the deadline.", 1.6)); wait(4.6).then(() => shout(hero, "I'm trying not to die!", 1.5));
   await until(() => hero.x > a.x1 - 2.4 && hero.grounded && !hero.busy);
   await endAction(); clock.on = false; hero.shown = false;
@@ -1142,7 +1155,8 @@ async function boot() {
   L = new Lettering($('ink'));
   hero = new Char('hero'); thug = new Char('thug'); goon = new Char('goon'); w1 = new Char('worker'); w2 = new Char('worker'); w3 = new Char('worker'); gage = new Char('gage');
   tax1 = new Char('tax1'); tax2 = new Char('tax2'); cor1 = new Char('corner1'); cor2 = new Char('corner2'); brick = new Char('brick'); keeper = new Char('keeper'); clerk = new Char('clerk');
-  chars = [hero, thug, goon, w1, w2, w3, gage, tax1, tax2, cor1, cor2, brick, keeper, clerk]; hero.hp = 5;
+  m1 = new Char('tax1'); m2 = new Char('corner2'); m3 = new Char('worker'); m4 = new Char('corner1'); m5 = new Char('tax2'); mob = [m1, m2, m3, m4, m5];
+  chars = [hero, thug, goon, w1, w2, w3, gage, tax1, tax2, cor1, cor2, brick, keeper, clerk, ...mob]; hero.hp = 5;
   const sheets = {};
   for (const c of chars) { const cfg = (manifest.sprites || {})[c.kind]; if (!cfg) continue;
     if (!sheets[c.kind]) { const s = sheets[c.kind] = {}; const img = await loadImage('./art/' + cfg.file);
