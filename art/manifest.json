@@ -465,8 +465,9 @@
   "3.4": {
    "far": "p1_far.png",
    "near": "bg_3_4c.png",
-   "zoom": 1.32,
-   "lift": -2.3
+   "zoom": 1.12,
+   "lift": -1.7,
+   "slide": 0.9
   },
   "5.3": {
    "near": "bg_5_3.png",
@@ -957,6 +958,9 @@
    "near": "bg_7_6.png",
    "zoom": 1.0,
    "lift": -4.0
+  },
+  "3.2": {
+   "teaser": "t3_2.png"
   }
  },
  "sprites": {
