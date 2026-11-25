@@ -412,6 +412,22 @@ async function vanWalk() { const p = P['2.6'], a = (manifest.panels || {})['2.6'
     await walkTo(c, x1, 1.5); c.set('walk'); let u = 0;
     await until(dt => { u = Math.min(1, u + dt / 1.5); c.x = x1 + (x2 - x1) * u; c.y = y0 + (y2 - y0) * u; c.size = .58 - .24 * u; c.alpha = u < .75 ? 1 : 1 - (u - .75) / .25; c.phase += dt * 5; return u >= 1; });
     c.shown = false; c.alpha = 1; c.size = 1; c.tint = null; c.float = false; })); }
+// A figure moved through a story picture by the script, nobody at the controls (the picture is painted with nobody in it).
+// Each point is [across, down, size, seconds, how]: where the feet are as fractions of the picture, how big the figure is there,
+// how long the leg to that point takes, and how it is done: a number = a jump that high, 'slip' = a stumble on arrival, 'word:TEXT' = a sound word on arrival.
+async function runThrough(id, c, pts, o = {}) { const p = P[id]; enterPanel(p, .8); const q = picRect(p, 0, 0, 1, 1);
+  if (!q) { await wait(p.def.auto || 1.5); return; }
+  const at = ([fx, fy, s]) => [q.X(fx), q.Y(fy) - (p.y0 + GROUND), s];
+  await wait(o.hold == null ? .7 : o.hold);
+  const [sx, sy, ss] = at(pts[0]); spawn(c, p, sx - p.x0, { face: 1 }); c.float = true; c.y = sy; c.size = ss; c.grounded = true;
+  for (let i = 1; i < pts.length; i++) { const [x1, y1, s1] = at(pts[i]), dur = pts[i][3] || 1, how = pts[i][4], x0 = c.x, y0 = c.y, s0 = c.size, up = typeof how === 'number' ? how : 0; let u = 0;
+    c.face = Math.sign(x1 - x0) || c.face; c.set(up ? 'jump' : 'walk'); c.grounded = !up;
+    await until(dt => { u = Math.min(1, u + dt / dur); c.x = x0 + (x1 - x0) * u; c.y = y0 + (y1 - y0) * u + Math.sin(Math.PI * u) * up; c.size = s0 + (s1 - s0) * u; if (!up) c.phase += dt * 11; return u >= 1; });
+    c.grounded = true;
+    if (how === 'slip') { c.set('hurt'); shake = .25; burst('WHOA!', c.x + 1.2, c.wy + 4.6 * c.size, .8, 1, .8); await wait(.55); }
+    else if (typeof how === 'string' && how.startsWith('word:')) { burst(how.slice(5), c.x, c.wy + 5 * c.size, .9, 2, .9); shake = .35; } }
+  c.shown = false; c.size = 1; c.float = false; c.set('idle'); await wait(o.after == null ? .5 : o.after);
+}
 function addSpot(p, r, pos) { const mesh = put(new THREE.Mesh(new THREE.CircleGeometry(r, 48), clipMat({ color: 0xfff3b0, opacity: .26, blending: THREE.AdditiveBlending }, p.ref)));
   mesh.renderOrder = p.base + 17; spot = { mesh, p, r, pos, heat: 0 }; }
 function addFork(p) { const mesh = put(new THREE.Mesh(new THREE.PlaneGeometry(5.6, 4.4), clipMat({ map: tex(forkliftCanvas()), side: THREE.DoubleSide }, p.ref)));
@@ -532,6 +548,10 @@ async function prologue1() {
 }
 
 async function prologue2() {
+  if (QS.get('frame') !== 'P0.6') await packageTax();   // ?page=P2&frame=P0.6 starts at Danny's book
+  await yearPasses();
+}
+async function packageTax() {
   const a = P['P0.5']; enterPanel(a);
   if (!clock.on) setClock(8, 26, 18, 12);
   spawn(tax1, a, a.w - 6.5, { face: -1, relaxed: true, hp: 9 }); spawn(tax2, a, a.w - 4.2, { face: -1, relaxed: true, hp: 9 });
@@ -549,7 +569,14 @@ async function prologue2() {
   await say(hero, "No, Dot. I gave it away.\nThought I'd be generous."); await say(hero, "I'll mark it lost.", 'radio'); await say(hero, "That's it?"); await say(hero, "That's the job.", 'radio');
   stopClock(); await payout('First delivery: LOST', 0, 'a lost package costs the pay, never the game');
   hero.shown = false;
-  for (const id of ['P0.6', 'P0.7a', 'P0.7b', 'P0.7c', 'P0.7d']) await storyFrame(id, id === 'P0.6' ? 1.6 : .7);
+}
+async function yearPasses() {
+  await storyFrame('P0.6', 1.6);
+  // a year of learning the job, played out by itself: up the fire escape (and nearly off it), across the roofs, through the traffic
+  await runThrough('P0.7a', hero, [[.66, .97, 1.9], [.47, .76, 1.6, 1.1, 'slip'], [.22, .5, 1.15, 1.5], [.3, .5, 1.1, .35], [.47, .31, .7, 1.3], [.56, .2, .5, .9]]);
+  await runThrough('P0.7b', hero, [[-.2, .8, 1.7], [.2, .8, 1.7, .8], [.78, .8, 1.7, .7, 2.6], [1.25, .8, 1.7, .8]]);
+  await runThrough('P0.7c', hero, [[-.2, .93, 1.7], [.3, .93, 1.7, .9], [.62, .95, 1.7, .5, 'word:HOOONK!'], [.8, .95, 1.7, .45, 1.6], [1.25, .95, 1.7, .7]]);
+  await storyFrame('P0.7d', .7);
   wallet.cash = 0; $('cash').style.display = 'none';   // a year on: tonight's money starts from nothing
 }
 
