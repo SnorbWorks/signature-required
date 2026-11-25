@@ -1073,7 +1073,24 @@
     "hurt",
     "down",
     "wind"
-   ]
+   ],
+   "walk": {
+    "file": "tax1_walk.png",
+    "height": 255,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
   },
   "tax2": {
    "file": "tax2.png",
@@ -1087,7 +1104,24 @@
     "hurt",
     "down",
     "wind"
-   ]
+   ],
+   "walk": {
+    "file": "tax2_walk.png",
+    "height": 275,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
   },
   "corner1": {
    "file": "corner1.png",
@@ -1101,7 +1135,24 @@
     "hurt",
     "down",
     "wind"
-   ]
+   ],
+   "walk": {
+    "file": "corner1_walk.png",
+    "height": 252,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
   },
   "corner2": {
    "file": "corner2.png",
@@ -1115,7 +1166,24 @@
     "hurt",
     "down",
     "wind"
-   ]
+   ],
+   "walk": {
+    "file": "corner2_walk.png",
+    "height": 275,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
   },
   "brick": {
    "file": "brick.png",
@@ -1129,7 +1197,24 @@
     "hurt",
     "down",
     "wind"
-   ]
+   ],
+   "walk": {
+    "file": "brick_walk.png",
+    "height": 309,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
   },
   "keeper": {
    "file": "keeper.png",
@@ -1143,7 +1228,24 @@
     "hurt",
     "down",
     "wind"
-   ]
+   ],
+   "walk": {
+    "file": "keeper_walk.png",
+    "height": 248,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
   },
   "gage": {
    "file": "gage.png",
@@ -1166,7 +1268,24 @@
       "jump"
      ]
     }
-   ]
+   ],
+   "walk": {
+    "file": "gage_walk.png",
+    "height": 292,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
   },
   "worker": {
    "file": "worker.png",
@@ -1180,7 +1299,24 @@
     "hurt",
     "down",
     "wind"
-   ]
+   ],
+   "walk": {
+    "file": "worker_walk.png",
+    "height": 261,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
   },
   "clerk": {
    "file": "clerk.png",
@@ -1194,7 +1330,24 @@
     "hurt",
     "down",
     "wind"
-   ]
+   ],
+   "walk": {
+    "file": "clerk_walk.png",
+    "height": 248,
+    "anchor": "head",
+    "frames": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "cycle": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ]
+   }
   }
  },
  "top": {
